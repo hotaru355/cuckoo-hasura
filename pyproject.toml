@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cuckoo-hasura"
+version = "0.1.0"
+description = "An easy to use GraphQL query builder, optimized for Hasura."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Kenta Fried", email = "kenta.fried@gmail.com" },
+    { name = "Kayman Brusse" },
+]
+keywords = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "httpx>=0.24.0",
+    "orjson>=3.8.11",
+    "pydantic>=1.10.2",
+    "tenacity>=8.2.2",
+    "typing-extensions>=4.5.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/hotaru355/cuckoo-hasura"
+"Bug Tracker" = "https://github.com/hotaru355/cuckoo-hasura/issues"
+
+[project.scripts]
+codegen = "codegen.graphql_2_python:run_cli"
+
+[project.optional-dependencies]
+codegen = ["case-converter>=1.1.0", "graphql-core>=3.2.3"]
+
+[tool.setuptools]
+packages = ["cuckoo", "codegen"]

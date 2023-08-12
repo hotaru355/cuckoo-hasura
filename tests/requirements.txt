@@ -1,0 +1,5 @@
+coverage==7.2.3
+geojson-pydantic==0.6.2
+pytest-asyncio==0.21.0
+pytest-watch==4.2.0
+pytest==7.2.0

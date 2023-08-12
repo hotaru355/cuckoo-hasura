@@ -1,0 +1,28 @@
+# .coveragerc to control coverage.py
+[run]
+branch = True
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+    if TYPE_CHECKING:
+
+# Target is 95%
+fail_under = 98
+
+skip_empty = True
+
+omit = 
+    # omit test files
+    */tests/*
+    # omit init files
+    */__init__.py
+    # foreign code
+    cuckoo/encoders.py
+
+show_missing = True
+
+[xml]
+output = /tmp/coverage.xml
