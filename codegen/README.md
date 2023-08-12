@@ -1,4 +1,5 @@
 # CuckooCodeGen
+
 A code generator for [pydantic](https://docs.pydantic.dev/dev-v1/) models that creates model classes for all DB tables exposed through a Hasura server.
 
 ## 0. Install
