@@ -1,4 +1,5 @@
-FROM python:3.9-slim
+ARG PYTHON_VERSION
+FROM python:${PYTHON_VERSION:-3.9}-slim
 
 ENV APP_HOME=/usr/src/app
 WORKDIR $APP_HOME
@@ -7,9 +8,8 @@ WORKDIR $APP_HOME
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-COPY requirements.txt $APP_HOME
+COPY requirements.txt .coveragerc ./
 COPY tests/requirements.txt $APP_HOME/requirements_tests.txt
-COPY .coveragerc $APP_HOME
 
 RUN python -m pip install --upgrade pip --no-cache-dir \
     wheel \

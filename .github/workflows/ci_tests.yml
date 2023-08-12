@@ -1,5 +1,7 @@
 name: Running pytest suite
 on: [pull_request]
+permissions:
+  pull-requests: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -8,13 +10,14 @@ jobs:
         python-version: ["3.9", "3.10", "3.11"]
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - name: Fetch main repository
+        uses: actions/checkout@v3
         with:
-          python-version: ${{ matrix.python-version }}
+          path: ./
       - name: Run pytest suite
-        run: docker-compose run --name tests tests
+        run: >
+          docker compose build --build-arg PYTHON_VERSION=${{ matrix.python-version }} &&
+          docker compose run --name tests tests
       - name: Run coverage
         run: >
           docker start tests &&

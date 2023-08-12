@@ -35,6 +35,7 @@ from cuckoo.models.aggregate import (
 from cuckoo.models.common import TBATCH_MODEL, UntypedModel
 from cuckoo.utils import to_sql_function_args
 
+
 class InnerQuery(
     BinaryTreeNode[TMODEL],
     Generic[
@@ -510,4 +511,3 @@ class BatchQuery(
             numeric_model=numeric_model,
             **kwargs,
         )
-

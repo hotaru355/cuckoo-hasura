@@ -16,4 +16,4 @@ jobs:
         pip install mypy
     - name: Typecheck src
       run: |
-        MYPYPATH=./cuckoo,./tests,./codegen mypy --explicit-package-bases cuckoo tests codgen & exit 0
+        MYPYPATH=./cuckoo,./tests,./codegen mypy --explicit-package-bases cuckoo tests codegen & exit 0
