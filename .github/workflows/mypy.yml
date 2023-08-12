@@ -1,0 +1,19 @@
+name: Mypy
+on: [pull_request]
+jobs:
+  build:
+    name: Mypy
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.9
+    - name: Install MyPy
+      run: |
+        pip install mypy
+    - name: Typecheck src
+      run: |
+        MYPYPATH=./cuckoo,./tests,./codegen mypy --explicit-package-bases cuckoo tests codgen & exit 0
