@@ -1,5 +1,5 @@
-coverage==7.2.3
-geojson-pydantic==0.6.2
-pytest-asyncio==0.21.0
-pytest-watch==4.2.0
-pytest==7.2.0
+coverage==7.*
+geojson-pydantic>=0     # pydantic v1 and v2 supported
+pytest-asyncio==0.*
+pytest-watch==4.*
+pytest==7.*

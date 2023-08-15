@@ -1,5 +1,5 @@
 # 1. Run tests:
-# $> docker-compose run tests
+# $> docker-compose run -t tests tests
 #
 # 2.1 Create coverage report. For example:
 # $> docker exec tests coverage report
@@ -8,70 +8,71 @@
 # 2.2 Run tests in watch mode. For example:
 # $> docker exec tests ptw -- ./tests -s -x -vv --tb=long
 # $> docker exec tests ptw -- ./tests/test_query.py::TestAggregate::test_syntactic_sugar_functions
-version: "3.9"
+version: "0.1.0"
 
 services:
-    db:
-        container_name: db
-        environment:
-            - POSTGRES_USER=postgres
-            - POSTGRES_PASSWORD=postgres
-        healthcheck:
-            test: pg_isready
-            interval: 10s
-            timeout: 10s
-            retries: 3
-            start_period: 0s
-        image: postgis/postgis:latest
-        ports:
-            - '5432:5432'
-        restart: on-failure
-        user: postgres
-        volumes:
-            - db:/var/lib/postgresql/data
+  db:
+    container_name: db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: pg_isready
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 0s
+    image: postgis/postgis:latest
+    ports:
+      - '5432:5432'
+    restart: on-failure
+    user: postgres
+    volumes:
+      - db:/var/lib/postgresql/data
 
-    hasura:
-        container_name: hasura
-        depends_on:
-            db:
-                condition: service_healthy
-        environment:
-            - HASURA_GRAPHQL_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
-            - HASURA_GRAPHQL_METADATA_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
-            - HASURA_GRAPHQL_ENABLE_CONSOLE=true
-            - HASURA_GRAPHQL_ADMIN_SECRET=hasura
-        healthcheck:
-            test: curl -f http://localhost:8080/healthz || exit 1
-            interval: 10s
-            timeout: 3s
-            retries: 3
-            start_period: 0s
-        image: hasura/graphql-engine:v2.12.1
-        ports:
-            - '8080:8080'
-        restart: on-failure
+  hasura:
+    container_name: hasura
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - HASURA_GRAPHQL_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
+      - HASURA_GRAPHQL_METADATA_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
+      - HASURA_GRAPHQL_ENABLE_CONSOLE=true
+      - HASURA_GRAPHQL_ADMIN_SECRET=hasura
+    healthcheck:
+      test: curl -f http://localhost:8080/healthz || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 0s
+    image: hasura/graphql-engine:v2.12.1
+    ports:
+      - '8080:8080'
+    restart: on-failure
 
-    tests:
-        build:
-            context: .
-            dockerfile: devDockerfile
-        command: coverage run -m pytest ./tests -vv -m "not performance" --durations=10
-        container_name: tests
-        depends_on:
-            db:
-                condition: service_healthy
-            hasura:
-                condition: service_healthy
-        environment:
-            - PY_COLORS=1
-            - FORCE_COLORS=1
-        env_file:
-            - .env.default
-        profiles:
-            - tests
-        volumes:
-            - .:/usr/src/app/
+  tests:
+    build:
+      context: .
+      dockerfile: devDockerfile
+    command: >
+      bash -c 'python --version && pip freeze|grep ^pydantic= && coverage run -m pytest ./tests -v -m "not performance" --durations=10'
+    container_name: tests
+    depends_on:
+      db:
+        condition: service_healthy
+      hasura:
+        condition: service_healthy
+    environment:
+      - PY_COLORS=1
+      - FORCE_COLORS=1
+    env_file:
+      - .env.default
+    profiles:
+      - tests
+    volumes:
+      - .:/usr/src/app/
 
 volumes:
-    db:
-        driver: local
+  db:
+    driver: local

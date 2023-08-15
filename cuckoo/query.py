@@ -356,6 +356,11 @@ class Query(
         TMODEL_BASE,
         TNUM_PROPS,
     ],
+    Generic[
+        TMODEL,
+        TMODEL_BASE,
+        TNUM_PROPS,
+    ],
 ):
     """
     Query builder for retrieving one, many, or an aggregate of models.
