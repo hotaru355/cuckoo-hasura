@@ -8,17 +8,23 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.11"]
+        pydantic-version: ["1.*", "2.*"]
 
     steps:
       - name: Fetch main repository
         uses: actions/checkout@v3
         with:
           path: ./
-      - name: Run pytest suite
+      - name: Build test container
         run: >
-          docker compose build --build-arg PYTHON_VERSION=${{ matrix.python-version }} &&
+          docker compose build
+          --build-arg PYTHON_VERSION=${{ matrix.python-version }}
+          --build-arg PYDANTIC_VERSION=${{ matrix.pydantic-version }} 
+          tests
+      - name: Run test suite
+        run: >
           docker compose run --name tests tests
-      - name: Run coverage
+      - name: Run coverage report
         run: >
           docker start tests &&
           docker exec tests coverage xml &&
