@@ -3,26 +3,26 @@
 *... making the call :P*
 
 
-**An opinionated *client-side* GraphQL query builder for Hasura.** Allows to issue complex queries and mutations by calling simple function - no strings required (nor attached :). Results are returned as [pydantic models](https://pydantic-docs.helpmanual.io/usage/models/), which means using type-save objects rather than just dictionaries. Exposes a simple python API and it comes with a tiny code-generating executabe for generating models from your GQL schema.
+**An opinionated *client-side* GraphQL query builder for Hasura.** Allows to issue complex queries and mutations by calling simple function - no strings required (nor attached :). Results are returned as [pydantic models](https://pydantic-docs.helpmanual.io/usage/models/), which means using type-save objects rather than just dictionaries. Exposes a simple python API and it comes with a tiny code-generating executable for generating models from your GQL schema.
 
 Key features:
-
- - **speed & memory efficient**: as CPU/memory efficient as possible (assuming small pydantic overhead)
- - **convenient**: a cohesive API that is easy and unobstuctive to use
- - **flexible**: support most common use cases, but also flexible enough to cover edge cases
- - **save**: input variables are passed to Hasura properly - no string expansion
+ - **clean and intuitive** API that is easy and unobstructive to use
+ - **speed & memory** efficient, by returning models async or as a
+ generator
+ - **robust** with a built-in [re-connect option](https://github.com/jd/tenacity) and by passing conditions to related objects securely
+ - **fun**, since your code reads just so much nicer :)
 
 ## Content
 
 - [Examples](#examples)
 - [Getting Started](#getting-started)
-- [usage](#usage)
+- [Usage](#usage)
 - [API Reference](#api-reference)
 
 ## Examples
 
 ```py
-# 1. Build your query with functions, not with long strings
+# 1. Query with function calls, not long strings
 author = Query(Author)
     .one_by_pk(uuid=some_uuid)
     .returning([
@@ -32,7 +32,13 @@ author = Query(Author)
 # 2. Work with pydantic models (classes) instead of untyped dictionaries
 assert isinstance(author.uuid, UUID) and isinstance(author.name, str)
 
-# 3. All variables, including those of sub-queries, will be passed to Hasura as such
+# 3. Call yielding and async methods to "finalize" your query
+authors_gen = Query(Author).many().yielding()
+assert isinstance(authors_gen, typing.Generator)
+authors_coro = await Query(Author).many().returning_async()
+assert isinstance(authors_coro, typing.Coroutine)
+
+# 4. All variables, including those of sub-queries, will be passed to Hasura as such
 author = Query(Author)
     .one_by_pk(uuid="ABC")
     .returning([
@@ -41,10 +47,6 @@ author = Query(Author)
             .many(where={"title": {"_eq": "Cuckoo!"} })
             .returning(["title"]),
     ]) # => `variables = {"uuid": "ABC", "title": { "name": {"_eq": "Cuckoo!"} } }`
-
-# 4. Use yielding methods to return generators (i.e. for large results)
-all_authors = Query(Author).many().yielding()
-assert isinstance(next(all_authors), Author)
 
 # 5. Make batched calls in a transaction
 with Insert.batch() as BatchInsert, _, _:
@@ -60,11 +62,10 @@ with Insert.batch() as BatchInsert, _, _:
 #  insert_articles(..) { returning { title } }
 # }
 
-
 # 6. Easy debugging: just stringify cuckoo!
 q = Query(Author)
 assert str(q) == "query Query { }"
-q.one_by_pk(uuid=some_uuid).returning()
+q.one_by_pk(uuid=some_uuid).returning(["uuid"])
 assert str(q) == "query Query($uuid: uuid!) { authors_by_pk(uuid: $uuid) { uuid } }"
 ```
 ## Getting Started
@@ -91,7 +92,7 @@ HASURA_ROLE=admin
 HASURA_ADMIN_SECRET=hasura
 ```
 
-Alternatively, you can provide the connection settings when instantiating your query or mutation. This comes in handy, if you need to connect to different Hasura instances whithin the same project:
+Alternatively, you can provide the connection settings when instantiating your query or mutation. This comes in handy, if you need to connect to different Hasura instances within the same project:
 ```py
 Query(Author, config={
     "url": "http://hasura:8080/v1/graphql"
@@ -105,7 +106,7 @@ Query(Author, config={
 ### 2. Queries and Mutations
 
 The Cuckoo API consists of 4 classes that allow you to `Query`, `Insert`, `Update` and `Delete` records in Hasura. A fifth `Mutation` class is only useful when the goal is to combine multiple mutations in a single transaction. Finally, there is the `Include` class that can only be used inside certain methods to help including other models - see [section 2.2]() below for details.
-Each of the 4 builder classes takes as a first argument the pydantic model that it should return. It is the only required argument to instanciate a builder class.
+Each of the 4 builder classes takes as a first argument the pydantic model that it should return. It is the only required argument to instantiate a builder class.
 
 You start building your query or mutation by calling one of the few methods that these classes expose:
 
@@ -120,13 +121,13 @@ You start building your query or mutation by calling one of the few methods that
 - `Delete().one_by_pk()`: Delete one record of a table by its primary key.
 - `Delete().many()`: Delete many records by providing a `where` clause.
 
-Furthermore, each of these classes expose a static `batch()` method that is intendent to be used in an execution context. All queries and mutations executed within the context are sent to Hasura in a transaction and results are therefore only available once code execution moves beyond the execution context. The `batch()` method takes the same `config` argument as the class constructors.
+Furthermore, each of these classes expose a static `batch()` method that is intended to be used in an execution context. All queries and mutations executed within the context are sent to Hasura in a transaction and results are therefore only available once code execution moves beyond the execution context. The `batch()` method takes the same `config` argument as the class constructors.
 
 For more details on each of these methods, see the API reference.
 
 #### 2.1 Returning fields
 
-All query and mutation methods (with the exception of `Query().aggregate()`) allow you to finish the query with one of the following methods: `returning()`, `returning_async()`, and `yielding()`. All of these methods accept a `columns` parameter to select the fields of a model being returned and it defaults to `["uuid"]` if not provided. While `returning()` returns a model or list of models directly, the `yielding()` method returns a generator that resolves to the requested model. `returning_async()` returns a coroutine and is inteded to be used for parallel requests. Note that queries and mutations inside a `batch()` execution context provide **only** the `yielding()` method, as results will not be immediately available.
+All query and mutation methods (with the exception of `Query().aggregate()`) allow you to finish the query with one of the following methods: `returning()`, `returning_async()`, and `yielding()`. All of these methods accept a `columns` parameter to select the fields of a model being returned and it defaults to `["uuid"]` if not provided. While `returning()` returns a model or list of models directly, the `yielding()` method returns a generator that resolves to the requested model. `returning_async()` returns a coroutine and is intended to be used for parallel requests. Note that queries and mutations inside a `batch()` execution context provide **only** the `yielding()` method, as results will not be immediately available.
 
 #### 2.2 Including sub models
 In case you would like to select a field that is actually a relation object, relation array or relation aggregate of a sub model, you can use the `Include` class.
@@ -140,7 +141,7 @@ Query(Author).one_by_pk(uuid="ABC").returning([
 ])
 ```
 
-Similarily, provided that the `Author` and the `Article` model have a one-to-many relationship, an insert could look like this:
+Similarly, provided that the `Author` and the `Article` model have a one-to-many relationship, an insert could look like this:
 
 ```py
 Insert(Author).one(data={..}).returning([ # `data` would be a nested object with a list of article data
@@ -149,7 +150,7 @@ Insert(Author).one(data={..}).returning([ # `data` would be a nested object with
 ])
 ```
 
-Finally, we can include sub model aggregates as well. Here an example of getting the avarage number of words of all the authors articles when updating an author by UUID:
+Finally, we can include sub model aggregates as well. Here an example of getting the average number of words of all the authors articles when updating an author by UUID:
 ```py
 Update(Author).one_by_pk(uuid="ABC", data={..}).returning([
     "uuid",
@@ -234,7 +235,7 @@ The builder for making Hasura queries.
 *Args:*
 - `model`: The pydantic model of the return value
 - *optional* `config`: The connection details to the Hasura server and other configurations
-- *optional* `logger`: loggs the query and any errors
+- *optional* `logger`: logs the query and any errors
 - *optional* `base_model`: The model (without any relations) to be used for `min` and `max` aggregation results. Defaults to a blank model with `extra="allow"` for easy, but untyped access. 
 - *optional* `numeric_model`: A model that contains only the numeric properties of the base model as floats to return all aggregate results, except those of `min` and `max`. Defaults to a blank model with `extra="allow"` for easy, but untyped access.
 #### Query.**many**(*where: Dict[str, Any] = None, distinct_on: Set[str] = None, limit: int = None, offset: int = None, order_by: Dict[str, "asc"|"desc"] = None*) -> cuckoo.[ReturningFinalizer](#class-cuckooreturningfinalizer)[list[TMODEL]] | cuckoo.[YieldingFinalizer](#class-cuckooyieldingfinalizer)[list[TMODEL]]
@@ -243,7 +244,7 @@ Build a query for a list of models.
 
   *Args:*
    - *optional* `where`: The where clause to filter the result set with
-   - *optional* `distinct_on`: The distict clause to the query
+   - *optional* `distinct_on`: The distinct clause to the query
    - *optional* `limit`: The maximum number of results returned
    - *optional* `offset`: The offset being skipped from the result set
    - *optional* `order_by`: The order-by clause to the query
@@ -273,7 +274,7 @@ Build a query for a list of models.
   
   *Args:*
    - *optional* `where`: The where clause to filter
-   - *optional* `distinct_on`: The distict clause
+   - *optional* `distinct_on`: The distinct clause
    - *optional* `limit`: The maximum number of records
    - *optional* `offset`: The offset being skipped from matching records
    - *optional* `order_by`: The order-by clause
@@ -290,7 +291,7 @@ Build a query for a list of models.
    - `function_name`: The name of the custom function to query
    - *optional* `args`: The arguments passed to the function. Note that the utility function `utils.to_sql_function_args()` is used to convert input into the expected format. 
    - *optional* `where`: The where clause to filter
-   - *optional* `distinct_on`: The distict clause
+   - *optional* `distinct_on`: The distinct clause
    - *optional* `limit`: The maximum number of records
    - *optional* `offset`: The offset being skipped from matching records
    - *optional* `order_by`: The order-by clause
@@ -311,7 +312,7 @@ next(authors_over_50) # OK
 
 #### *static* Query.**batch_async**(*config: dict = DEFAULT_CONFIG, logger: Logger = None*) -> Generator[BatchQuery]
 
-A asynchrounous version of `Query.batch()`. Example:
+A asynchronous version of `Query.batch()`. Example:
 ```py
 async def get_authors():
     async with Query.batch_async() as BatchQuery:
@@ -367,7 +368,7 @@ next(num_author_rows) # OK
 
 #### *static* Mutation.**batch_async**(*config: dict = None, logger: Optional[Logger] = None*):
 
-A asynchrounous version of `Mutation.batch()`. Example:
+A asynchronous version of `Mutation.batch()`. Example:
 ```py
 async def do_in_transaction():
     async with Mutation.batch_async() as BatchInsert, BatchUpdate, _ :
@@ -544,7 +545,7 @@ Get a generator that yields an aggregate model.
 ## Wishlist
 
 - type checker
-- maybe more syntatic sugar, like having `where` and `order_by` methods (?):
+- maybe more syntactic sugar, like having `where` and `order_by` methods (?):
 ```py
 # Build queries dynamically
 def get_by_A_or_b(a=None, b=None):
