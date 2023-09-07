@@ -46,6 +46,12 @@ class RootNode(BinaryTreeNode[TMODEL]):
         self._close_session = False
 
     def __str__(self: RootNode):
+        """The GraphQL query string the builder currently resolves to.
+
+        Returns:
+            str: The GraphQL query string
+        """
+
         outer_args = self._get_all_outer_args()
         return f"""
             {self._fragments.query_name}{

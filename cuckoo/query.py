@@ -47,11 +47,10 @@ class InnerQuery(
         TNUM_PROPS,
     ],
 ):
-    """
-    The inner part of a query.
+    """The inner part of a query.
 
-    Extends:
-        - BinaryTreeNode: Provides properties and methods to create a binary tree.
+    Note:
+        Any query needs at least one inner query.
     """
 
     def __init__(
@@ -69,20 +68,6 @@ class InnerQuery(
         ),
         **kwargs,
     ):
-        """
-        Args:
-            model (Type[TMODEL]): The model the query is resolving to
-            parent (BinaryTreeNode, optional): The parent node. Defaults to None.
-            finalizers (tuple[Type[TFIN_ONE], Type[TFIN_MANY], Type[TFIN_AGGR]],
-                optional):
-                The classes that end a query. Defaults to
-                ( ReturningFinalizer[TMODEL], ReturningFinalizer[list[TMODEL]],
-                AggregateFinalizer[Aggregate[TMODEL_BASE, TNUM_PROPS], TMODEL], ).
-            base_model (Type[TMODEL_BASE], optional): The model that is used for
-                aggregates on `min` and `max`. Defaults to UntypedModel.
-            numeric_model (Type[TNUM_PROPS], optional): The model that is used for
-                aggregates except `min` and `max`. Defaults to UntypedModel.
-        """
         super().__init__(model=model, parent=parent, **kwargs)
         (
             self._one_by_pk_finalizer,
@@ -96,20 +81,22 @@ class InnerQuery(
         self,
         uuid: UUID,
     ):
-        """
-        Build a query for finding a single model by its UUID.
+        """Build a query for finding a single model by its UUID.
 
-        ### Args:
-        - `uuid`: The uuid of the record to query
+        Args:
+            uuid: The uuid of the record to query
 
-        ### Returns:
-        - `ReturningFinalizer[TMODEL]` for queries outside of a `batch()`
-            execution context
-        - `YieldingFinalizer[TMODEL]` for queries inside a `batch()`
-            execution context
+        Returns:
+            ReturningFinalizer[TMODEL, TMODEL]: A class that allows to finalize the
+            query.
 
-        ### Raises:
-        `NotFoundError` if no matching record was found
+        Raises:
+            NotFoundError: if no matching record was found
+
+        Note:
+            When called inside a ``batch`` execution context, the returned
+            ``YieldingFinalizer[TMODEL]`` class allows to only finalize the query with
+            ``yielding()`` and not ``returning()`` nor ``returning_async()``.
         """
 
         inner_query = self._get_inner_query()
@@ -136,25 +123,18 @@ class InnerQuery(
         offset: Optional[int] = None,
         order_by: Optional[ORDER_BY] = None,
     ):
-        """
-        Build a query for a list of models.
+        """Build a query for a list of models.
 
         Args:
-            where (WHERE, optional): The where filter, e.g.
-                `{"name": {"_eq": "cuckoo"} }`. Defaults to None.
-            distinct_on (set[str], optional): The field(s) required to be distinct.
+            where: The where filter, e.g. `{"name": {"_eq": "cuckoo"} }`.
                 Defaults to None.
-            limit (int, optional): The maximum number of records returned.
-                Defaults to None.
-            offset (int, optional): The number of records to offset. Defaults to None.
-            order_by (ORDER_BY, optional): The order condition, e.g. `{"age": "desc"}`.
-                Defaults to None.
+            distinct_on: The field(s) required to be distinct. Defaults to None.
+            limit: The maximum number of records returned. Defaults to None.
+            offset: The number of records to offset. Defaults to None.
+            order_by: The order condition, e.g. `{"age": "desc"}`. Defaults to None.
 
         Returns:
-            - `ReturningDirectFinalizer[list[TMODEL]]`: for queries outside of a
-                `batch()` execution context
-            - `YieldingDirectFinalizer[list[TMODEL]]`: for queries inside a `batch()`
-                execution context
+            for queries outside of a `batch()` execution context.
         """
 
         inner_query = self._get_inner_query()
@@ -184,21 +164,18 @@ class InnerQuery(
         offset: Optional[int] = None,
         order_by: Optional[ORDER_BY] = None,
     ):
-        """
-        From the filtered and ordered result set, get one or more aggregate value.
+        """From the filtered and ordered result set, get one or more aggregate value.
 
         Args:
-            where (WHERE, optional): _description_. Defaults to None.
-            distinct_on (set[str], optional): _description_. Defaults to None.
-            limit (int, optional): _description_. Defaults to None.
-            offset (int, optional): _description_. Defaults to None.
-            order_by (ORDER_BY, optional): _description_. Defaults to None.
+            where: _description_. Defaults to None.
+            distinct_on: _description_. Defaults to None.
+            limit: _description_. Defaults to None.
+            offset: _description_. Defaults to None.
+            order_by: _description_. Defaults to None.
 
-        Raises:
-            RecordNotFoundError: _description_
 
         Returns:
-            _type_: _description_
+            The aggregation model.
         """
 
         inner_query = self._get_inner_query()
@@ -360,9 +337,15 @@ class Query(
     """
     Query builder for retrieving one, many, or an aggregate of models.
 
-    Extends:
-        RootNode: provides functionality to execute a query.
-        InnerQuery: provides functionality to specify the kind of query to be created.
+    Args:
+        model: The model the query is resolving to
+        config: The hasura connection settings and other configuration.
+            Defaults to None.
+        logger: The logger. Defaults to None.
+        base_model: The model that is used for aggregates on `min` and `max`.
+            Defaults to UntypedModel.
+        numeric_model: The model that is used for aggregates except `min` and `max`.
+            Defaults to UntypedModel.
     """
 
     def __init__(
@@ -376,19 +359,6 @@ class Query(
         base_model: Type[TMODEL_BASE] = cast(Type[TMODEL_BASE], UntypedModel),
         numeric_model: Type[TNUM_PROPS] = cast(Type[TNUM_PROPS], UntypedModel),
     ):
-        """
-        Create a new query builder.
-
-        Args:
-            model (Type[TMODEL]): The model the query is resolving to
-            config (dict, optional): The hasura connection settings and other
-                configuration. Defaults to None.
-            logger (Optional[Logger], optional): The logger. Defaults to None.
-            base_model (Type[TMODEL_BASE], optional): The model that is used for
-                aggregates on `min` and `max`. Defaults to UntypedModel.
-            numeric_model (Type[TNUM_PROPS], optional): The model that is used for
-                aggregates except `min` and `max`. Defaults to UntypedModel.
-        """
         super().__init__(
             model=model,
             config=config,
@@ -412,6 +382,18 @@ class Query(
         session: Optional[Client] = None,
         logger: Optional[Logger] = None,
     ):
+        """Create a context to execute multiple queries in a transaction.
+
+        Args:
+            config: The config object.
+            session: The ``httpx.Client`` to use for the query.
+            logger: The logger.
+
+        Example:
+            Query.batch()
+
+        """
+
         root: Query = Query(
             model=object,
             config=config,

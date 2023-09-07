@@ -52,6 +52,26 @@ class InnerInsert(
         data: dict[str, Any],
         on_conflict: Optional[OnConflict] = None,
     ) -> TFIN_ONE:
+        """Insert one record into Hasura.
+
+        Args:
+            data: The dictionary of data to be persisted
+            on_conflict: How to deal with a conflicts on database constraints.
+                Defaults to None.
+
+        Returns:
+            ReturningFinalizer[TMODEL, TMODEL]: A class that allows to finalize the
+            query.
+
+        Raises:
+            InsertFailedError: if inserting a new record was unsuccessful.
+
+        Note:
+            When called inside a ``batch`` execution context, the returned
+            ``YieldingFinalizer[TMODEL]`` class allows to only finalize the query with
+            ``yielding()`` and not ``returning()`` nor ``returning_async()``.
+        """
+
         object_var_name = self._root._generate_var_name()
         inner_insert = self._get_inner_insert()
         inner_insert._fragments.query_name = (
