@@ -40,7 +40,7 @@ class CodegenConfig(DefaultConfig):
     def get_schema_and_table(name: str) -> tuple[str, str]:
         if name.startswith("scan_data"):
             schema = "scan_data"
-            table = name.lstrip("scan_data")
+            table = name.removeprefix("scan_data_")
         else:
             schema, table = name.split("_", maxsplit=1)
 

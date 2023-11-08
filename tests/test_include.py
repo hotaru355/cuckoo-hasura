@@ -178,7 +178,7 @@ class TestOne:
             )
 
         assert (
-            "Elements in `returning` need to be of type `str` or `Include`. "
+            "Elements in `returning` need to be of type `str` or an instance of `Include`. "
             "Found type=<class 'cuckoo.finalizers.IncludeFinalizer'>."
         ) in str(err)
 
@@ -282,6 +282,18 @@ class TestAggregate:
         actual = get_actual(author.articles_aggregate.aggregate)
 
         assert actual == expected
+
+
+def test_raises_error_if_instance_is_used_more_than_once(
+    persisted_author: Author,
+):
+    columns = [Include(Article).many().returning()]
+    Query(Author).one_by_pk(uuid=persisted_author.uuid).returning(columns)
+    with raises(ValueError) as error:
+        Query(Author).one_by_pk(uuid=persisted_author.uuid).returning(columns)
+    assert (
+        "Found an instance `Include(Article)` that was already used in an executed query"
+    ) in str(error)
 
 
 @fixture(scope="module")
