@@ -1,5 +1,5 @@
 # 1. Run tests:
-# $> docker-compose run -t tests tests
+# $> docker compose run --rm tests
 #
 # 2.1 Create coverage report. For example:
 # $> docker exec tests coverage report

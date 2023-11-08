@@ -92,6 +92,16 @@ class Prop:
         self._field_name = field_name
 
     @staticmethod
+    def merge(*dicts: dict):
+        """Combine multiple dictionaries into a single dictionary. Note: duplicate keys
+        will be overwritten.
+
+        Returns:
+            dict: The merged dictionary.
+        """
+        return {key: value for one_dict in dicts for key, value in one_dict.items()}
+
+    @staticmethod
     def and_(*props: dict):
         return {"_and": list(props)}
 
@@ -100,8 +110,10 @@ class Prop:
         return {"_or": list(props)}
 
     @staticmethod
-    def not_(prop: dict):
-        return {"_not": prop}
+    def not_(*props: dict):
+        return {
+            "_not": Prop.merge(*props),
+        }
 
     def with_(self, *props: dict):
         """Create sub-directories for `where` clauses on relations.
@@ -121,9 +133,7 @@ class Prop:
         """
 
         return {
-            self._field_name: {
-                key: value for prop in props for key, value in prop.items()
-            }
+            self._field_name: Prop.merge(*props),
         }
 
     def like_(self, value: str):
@@ -156,7 +166,7 @@ class Prop:
     def contained_in_(self, values: list):
         return {self._field_name: {"_contained_in": values}}
 
-    def has_key(self, value: Any):
+    def has_key_(self, value: Any):
         return {self._field_name: {"_has_key": value}}
 
     def has_keys_any_(self, values: list):
