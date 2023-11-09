@@ -69,3 +69,184 @@ def grouper(
         tuple(entry for entry in iterable if entry is not None)
         for iterable in zip_longest(*iterables, fillvalue=None)
     )
+
+
+class Prop:
+    """Create dictionaries for `where` and `order_by` clauses.
+
+    Example:
+    ```py
+    assert Prop.and_(
+        Prop("name").like_("sam%"),
+        Prop("date").gt_(some_date)
+    ) == {
+        "_and": [
+            "name": {"_like": "sam%" },
+            "date": {"_gt": some_date },
+        ]
+    }
+    ```
+    """
+
+    def __init__(self, field_name: str) -> None:
+        self._field_name = field_name
+
+    @staticmethod
+    def merge(*dicts: dict):
+        """Combine multiple dictionaries into a single dictionary. Note: duplicate keys
+        will be overwritten.
+
+        Returns:
+            dict: The merged dictionary.
+        """
+        return {key: value for one_dict in dicts for key, value in one_dict.items()}
+
+    @staticmethod
+    def and_(*props: dict):
+        return {"_and": list(props)}
+
+    @staticmethod
+    def or_(*props: dict):
+        return {"_or": list(props)}
+
+    @staticmethod
+    def not_(*props: dict):
+        return {
+            "_not": Prop.merge(*props),
+        }
+
+    def with_(self, *props: dict):
+        """Create sub-directories for `where` clauses on relations.
+
+        Example:
+        ```py
+        assert Prop("articles").with_(
+            Prop("title").eq_("cuckoo"),
+            Prop("word_count").lt_(100)
+        ) == {
+            "articles": {
+                "title": {"_eq": "cuckoo"},
+                "word_count": {"_lt": 100}
+            }
+        }
+        ```
+        """
+
+        return {
+            self._field_name: Prop.merge(*props),
+        }
+
+    def like_(self, value: str):
+        return {self._field_name: {"_like": value}}
+
+    def ilike_(self, value: str):
+        return {self._field_name: {"_ilike": value}}
+
+    def nilike_(self, value: str):
+        return {self._field_name: {"_nilike": value}}
+
+    def similar_(self, value: str):
+        return {self._field_name: {"_similar": value}}
+
+    def nsimilar_(self, value: str):
+        return {self._field_name: {"_nsimilar": value}}
+
+    def regex_(self, value: str):
+        return {self._field_name: {"_regex": value}}
+
+    def iregex_(self, value: str):
+        return {self._field_name: {"_iregex": value}}
+
+    def nregex_(self, value: str):
+        return {self._field_name: {"_nregex": value}}
+
+    def contains_(self, value: dict):
+        return {self._field_name: {"_contains": value}}
+
+    def contained_in_(self, values: list):
+        return {self._field_name: {"_contained_in": values}}
+
+    def has_key_(self, value: Any):
+        return {self._field_name: {"_has_key": value}}
+
+    def has_keys_any_(self, values: list):
+        return {self._field_name: {"_has_keys_any": values}}
+
+    def eq_(self, value: Any):
+        return {self._field_name: {"_eq": value}}
+
+    def neq_(self, value: Any):
+        return {self._field_name: {"_neq": value}}
+
+    def gt_(self, value: Any):
+        return {self._field_name: {"_gt": value}}
+
+    def lt_(self, value: Any):
+        return {self._field_name: {"_lt": value}}
+
+    def gte_(self, value: Any):
+        return {self._field_name: {"_gte": value}}
+
+    def lte_(self, value: Any):
+        return {self._field_name: {"_lte": value}}
+
+    def in_(self, values: list):
+        return {self._field_name: {"_in": values}}
+
+    def nin_(self, value: list):
+        return {self._field_name: {"_nin": value}}
+
+    def is_null_(self, value: bool):
+        return {self._field_name: {"_is_null": value}}
+
+    def asc_(self):
+        """Create `order_by` clauses.
+
+        Examples:
+        ```py
+        assert Prop("age").asc_() == {
+            "age: "asc"
+        }
+
+
+        assert {
+            **Prop("age").asc_(),
+            **Prop("articles_aggregate").with_(
+                Prop("count").desc_()
+            )
+        } == {
+            "age: "asc"
+            "articles_aggregate": {
+                "count": "desc"
+            }
+        }
+        ```
+        """
+
+        return {self._field_name: "asc"}
+
+    def desc_(self):
+        """Create `order_by` clauses.
+
+        Examples:
+        ```py
+        assert Prop("age").desc_() == {
+            "age: "desc"
+        }
+
+
+        assert {
+            **Prop("age").asc_(),
+            **Prop("articles_aggregate").with_(
+                Prop("count").desc_()
+            )
+        } == {
+            "age: "asc"
+            "articles_aggregate": {
+                "count": "desc"
+            }
+        }
+        ```
+        """
+
+        return {self._field_name: "desc"}

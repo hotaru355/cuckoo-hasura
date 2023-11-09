@@ -89,9 +89,17 @@ class ExecutingFinalizer(Finalizer):
                 include = str_or_constructor(node)
                 response_key._columns[i] = include
                 ExecutingFinalizer._bind_includes(include)
+            elif isinstance(str_or_constructor, BinaryTreeNode):
+                raise ValueError(
+                    "A list of columns can only be used once if they include a "
+                    "an instance of `Include`. Found an instance "
+                    f"`Include({str_or_constructor.model.__name__})` that was already "
+                    "used in an executed query."
+                )
             else:
                 raise ValueError(
-                    "Elements in `returning` need to be of type `str` or `Include`. "
+                    "Elements in `returning` need to be of type `str` or "
+                    "an instance of `Include`. "
                     f"Found type={type(str_or_constructor)}."
                 )
 
