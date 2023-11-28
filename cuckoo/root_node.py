@@ -96,7 +96,12 @@ class RootNode(BinaryTreeNode[TMODEL]):
                 self._session = Client(timeout=None)
             return self._session
 
-    def _process_response(self, response: Response, query: str, variables: dict):
+    def _process_response(
+        self,
+        response: Response,
+        query: str,
+        variables: dict,
+    ):
         response.raise_for_status()
         response_json: dict[str, Any] = response.json()
 
@@ -106,20 +111,17 @@ class RootNode(BinaryTreeNode[TMODEL]):
             ) + response_json.get("errors", [])
             if self._logger:
                 self._logger.error(
-                    "Query failed. query=%s, variables=%s, response=%s",
-                    self._compact(query),
-                    to_truncated_str(variables),
-                    str(errors),
+                    f"Query failed. query={self._compact(query)}, "
+                    f"variables={to_truncated_str(variables)}, response={str(errors)}."
                 )
             raise HasuraServerError(errors)
 
         elif "data" in response_json:
             if self._logger:
                 self._logger.debug(
-                    "Query successful. query=%s, variables=%s, response=%s",
-                    self._compact(query),
-                    to_truncated_str(variables),
-                    to_truncated_str(response_json["data"]),
+                    f"Query successful. query={self._compact(query)}, "
+                    f"variables={to_truncated_str(variables)}, "
+                    f"response={to_truncated_str(response_json['data'])}."
                 )
             return response_json["data"]
 
@@ -137,10 +139,8 @@ class RootNode(BinaryTreeNode[TMODEL]):
 
         if self._logger:
             self._logger.debug(
-                "Executing Query. query=%s, variables=%s, config=%s",
-                self._compact(query),
-                to_truncated_str(variables),
-                self._config,
+                f"Executing query. query={self._compact(query)}, "
+                f"variables={to_truncated_str(variables)}."
             )
 
         session = self._get_or_create_session()
@@ -171,10 +171,8 @@ class RootNode(BinaryTreeNode[TMODEL]):
 
         if self._logger:
             self._logger.debug(
-                "Executing Query. query=%s, variables=%s, config=%s",
-                self._compact(query),
-                to_truncated_str(variables),
-                self._config,
+                f"Executing async query. query={self._compact(query)}, "
+                f"variables={to_truncated_str(variables)}."
             )
 
         session = self._get_or_create_session(use_async=True)
