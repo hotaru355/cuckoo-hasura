@@ -128,14 +128,10 @@ class TestOneByPK:
                 caplog.records,
             )
         )
-        assert record.args
-        query, variables, result = record.args
-        assert isinstance(query, str) and "authors_by_pk" in query
-        assert isinstance(variables, str) and str(existing_uuid) in variables
-        assert (
-            isinstance(result, str)
-            and f"{{'name': '{persisted_authors[0].name}'}}" in result
-        )
+        assert record
+        assert "authors_by_pk" in record.msg
+        assert str(existing_uuid) in record.msg
+        assert f"{{'name': '{persisted_authors[0].name}'}}" in record.msg
 
     async def test_failed_query_gets_logged(
         self,
@@ -169,14 +165,10 @@ class TestOneByPK:
                 caplog.records,
             )
         )
-        assert record.args
-        query, variables, errors = record.args
-        assert isinstance(query, str) and "authors_by_pk" in query
-        assert isinstance(variables, str) and str(existing_uuid) in variables
-        assert (
-            isinstance(errors, str)
-            and "field 'does_not_exist' not found in type: 'authors'" in errors
-        )
+        assert record
+        assert "authors_by_pk" in record.msg
+        assert str(existing_uuid) in record.msg
+        assert "field 'does_not_exist' not found in type: 'authors'" in record.msg
 
 
 @mark.parametrize(**FinalizeParams(Query).returning_many())
@@ -783,9 +775,11 @@ class TestBatch:
                 session=session,
             ) as BatchQuery:
                 with raises(AttributeError):
-                    BatchQuery(Author).one_by_pk(
-                        uuid=persisted_authors[0].uuid
-                    ).returning(),
+                    (
+                        BatchQuery(Author)
+                        .one_by_pk(uuid=persisted_authors[0].uuid)
+                        .returning(),
+                    )
 
                 with raises(AttributeError):
                     BatchQuery(Author).many().returning()
@@ -799,9 +793,11 @@ class TestBatch:
         with raises(HasuraServerError):
             async with Query.batch_async(session_async=session_async) as BatchQuery:
                 with raises(AttributeError):
-                    BatchQuery(Author).one_by_pk(
-                        uuid=persisted_authors[0].uuid
-                    ).returning(),
+                    (
+                        BatchQuery(Author)
+                        .one_by_pk(uuid=persisted_authors[0].uuid)
+                        .returning(),
+                    )
 
                 with raises(AttributeError):
                     BatchQuery(Author).many().returning()
