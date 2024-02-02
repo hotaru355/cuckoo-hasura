@@ -6,14 +6,13 @@ from httpx import AsyncClient, Client
 from cuckoo import Delete, Include, Insert
 from cuckoo.finalizers import AggregatesDict
 from tests.fixture.sample_models.public import (
+    Address,
+    Article,
     Author,
     AuthorDetail,
-    Article,
     Comment,
-    Address,
     DetailsAddresses,
 )
-
 
 DEFAULT_COUNTS = {
     Author: 10,
@@ -51,26 +50,30 @@ def generate_author_data(
                 created_by=user_uuid,
                 updated_by=user_uuid,
             ),
-            articles=[
-                Article(
-                    title=f"some title {article_counter + 1}",
-                    word_count=(article_counter % 3 + 1) * 1000,
-                    # [1000, 2000, 3000, 1000, 2000]
-                    created_by=user_uuid,
-                    updated_by=user_uuid,
-                    comments=[
-                        Comment(
-                            content=f"some content {comment_counter + 1}",
-                            likes=(comment_counter % 3 + 1),
-                            # [1, 2, 3, 1, 2]
-                            created_by=user_uuid,
-                            updated_by=user_uuid,
-                        )
-                        for comment_counter in range(num_comments)
-                    ],
-                )
-                for article_counter in range(num_articles)
-            ],
+            articles=(
+                [
+                    Article(
+                        title=f"some title {article_counter + 1}",
+                        word_count=(article_counter % 3 + 1) * 1000,
+                        # [1000, 2000, 3000, 1000, 2000]
+                        created_by=user_uuid,
+                        updated_by=user_uuid,
+                        comments=[
+                            Comment(
+                                content=f"some content {comment_counter + 1}",
+                                likes=(comment_counter % 3 + 1),
+                                # [1, 2, 3, 1, 2]
+                                created_by=user_uuid,
+                                updated_by=user_uuid,
+                            )
+                            for comment_counter in range(num_comments)
+                        ],
+                    )
+                    for article_counter in range(num_articles)
+                ]
+                if num_articles > 0
+                else None
+            ),
         ).to_hasura_input()
         for author_counter in range(num_authors)
     ]
@@ -217,7 +220,7 @@ def persist_author_details(
                 "uuid",
                 "country",
                 (
-                    Include(Address, key="primary_address")
+                    Include(Address, field_name="primary_address")
                     .one()
                     .returning(
                         columns=[
@@ -229,7 +232,7 @@ def persist_author_details(
                     )
                 ),
                 (
-                    Include(Address, key="secondary_address")
+                    Include(Address, field_name="secondary_address")
                     .one()
                     .returning(
                         columns=[
@@ -241,7 +244,7 @@ def persist_author_details(
                     )
                 ),
                 (
-                    Include(DetailsAddresses, key="past_primary_addresses")
+                    Include(DetailsAddresses, field_name="past_primary_addresses")
                     .many(where={"is_primary": {"_eq": True}})
                     .returning(
                         columns=[
@@ -260,7 +263,7 @@ def persist_author_details(
                     )
                 ),
                 (
-                    Include(DetailsAddresses, key="past_secondary_addresses")
+                    Include(DetailsAddresses, field_name="past_secondary_addresses")
                     .many(where={"is_primary": {"_eq": False}})
                     .returning(
                         columns=[
@@ -361,8 +364,15 @@ def all_columns(
         "uuid",
         "name",
         "age",
+        "home_zone",
         "jsonb_list",
         "jsonb_dict",
+        "updated_by",
+        "updated_at",
+        "created_by",
+        "created_at",
+        "deleted_by",
+        "deleted_at",
         Include(AuthorDetail).one().returning(["uuid", "country"]),
         (
             Include(Article)

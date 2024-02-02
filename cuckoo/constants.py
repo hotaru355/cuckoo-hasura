@@ -1,30 +1,31 @@
 from __future__ import annotations
+
 import os
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Literal,
     Type,
     TypedDict,
     Union,
-    TYPE_CHECKING,
 )
-from typing_extensions import TypeAlias, NotRequired
 
 from tenacity import stop_after_attempt, wait_random_exponential
+from typing_extensions import NotRequired, TypeAlias
 
 if TYPE_CHECKING:
-    from tenacity import (
-        StopBaseT,
-        WaitBaseT,
-        RetryBaseT,
-        RetryCallState,
-        RetryError,
-    )
+    from tenacity import RetryCallState, RetryError
+    from tenacity.retry import RetryBaseT
+    from tenacity.stop import StopBaseT
+    from tenacity.wait import WaitBaseT
 
 HASURA_URL = os.environ["HASURA_URL"]
 HASURA_ADMIN_SECRET = os.environ["HASURA_ADMIN_SECRET"]
 HASURA_ROLE = os.environ["HASURA_ROLE"]
+
+DEFAULT_COLUMNS = ["uuid"]
+DEFAULT_COLUMNS_INVERTED = []
 
 
 class HasuraConfig(TypedDict):

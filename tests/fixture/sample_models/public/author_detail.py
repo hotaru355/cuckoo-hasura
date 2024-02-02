@@ -1,16 +1,16 @@
 from typing import TYPE_CHECKING, ForwardRef, Optional
 from uuid import UUID
 
-from cuckoo.models.common import (
+from cuckoo.models import (
+    CreatableModel,
+    DeletableModel,
     HasuraTableModel,
     IdentityModel,
-    CreatableModel,
     UpdatableModel,
-    DeletableModel,
 )
 
 if TYPE_CHECKING:
-    from tests.fixture.sample_models.public import Author, Address, DetailsAddresses
+    from tests.fixture.sample_models.public import Address, Author, DetailsAddresses
 else:
     Author = ForwardRef("Author")
     Address = ForwardRef("Address")

@@ -41,7 +41,7 @@ services:
       - HASURA_GRAPHQL_ENABLE_CONSOLE=true
       - HASURA_GRAPHQL_ADMIN_SECRET=hasura
     healthcheck:
-      test: curl -f http://localhost:8080/healthz || exit 1
+      test: curl -f http://0.0.0.0:8080/healthz || exit 1
       interval: 10s
       timeout: 3s
       retries: 3
@@ -55,8 +55,9 @@ services:
     build:
       context: .
       dockerfile: devDockerfile
+      # bash -c 'python --version && pip freeze|grep ^pydantic= && coverage run -m pytest ./tests -v -m "not performance" --durations=10'
     command: >
-      bash -c 'python --version && pip freeze|grep ^pydantic= && coverage run -m pytest ./tests -v -m "not performance" --durations=10'
+      ptw -- ./tests/test_query.py -vv -m "not performance" -x -s
     container_name: tests
     depends_on:
       db:

@@ -12,18 +12,16 @@ SetIntStr = Set[Union[int, str]]
 DictIntStrAny = Dict[Union[int, str], Any]
 
 
-def generate_encoders_by_class_tuples(
-    type_encoder_map: Dict[Any, Callable[[Any], Any]]
-) -> Dict[Callable[[Any], Any], Tuple[Any, ...]]:
-    encoders_by_class_tuples: Dict[Callable[[Any], Any], Tuple[Any, ...]] = defaultdict(
-        tuple
-    )
-    for type_, encoder in type_encoder_map.items():
-        encoders_by_class_tuples[encoder] += (type_,)
+def _generate_encoders_by_class_tuples(
+    type_encoder_map: Dict[type, Callable[[Any], Any]],
+) -> Dict[Callable[[Any], Any], Tuple[type]]:
+    encoders_by_class_tuples = defaultdict(tuple)
+    for type_to_encode, encoder in type_encoder_map.items():
+        encoders_by_class_tuples[encoder] += (type_to_encode,)
     return encoders_by_class_tuples
 
 
-encoders_by_class_tuples = generate_encoders_by_class_tuples(ENCODERS_BY_TYPE)
+encoders_by_class_tuples = _generate_encoders_by_class_tuples(ENCODERS_BY_TYPE)
 
 
 def jsonable_encoder(

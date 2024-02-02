@@ -1,17 +1,14 @@
 from __future__ import annotations
-from functools import reduce
+
 from typing import (
+    Any,
     Callable,
     Optional,
     Type,
     Union,
-    cast,
-    get_args,
-    get_origin,
 )
-from typing_extensions import TypeAlias
 
-from pydantic.fields import ModelField
+from typing_extensions import TypeAlias
 
 from cuckoo.binary_tree_node import BinaryTreeNode
 from cuckoo.constants import ORDER_BY, WHERE
@@ -20,18 +17,18 @@ from cuckoo.finalizers import (
     AggregateIncludeFinalizer,
     IncludeFinalizer,
 )
-from cuckoo.models import TMODEL, HasuraTableModel
+from cuckoo.models import TMODEL
 
 
 class Include(BinaryTreeNode[TMODEL]):
     def __init__(
         self,
         model: Type[TMODEL],
-        key: Optional[str] = None,
+        field_name: Optional[str] = None,
         **kwargs,
     ):
         super().__init__(model=model, parent=None, **kwargs)
-        self._key = key
+        self._field_name = field_name
 
     def one(self):
         def bind_and_configure(parent: BinaryTreeNode):
@@ -87,59 +84,50 @@ class Include(BinaryTreeNode[TMODEL]):
 
         return AggregateIncludeFinalizer(node=self, finalize_fn=bind_and_configure)
 
-    def _get_relation_name(self, is_list=False):
-        parent_model = cast(HasuraTableModel, self._parent.model)
-        if self._key is not None:
-            parent_key, model_of_key = next(
-                filter(
-                    lambda field: field[0] == self._key, parent_model.__fields__.items()
-                ),
-                (None, None),
+    def _get_relation_name(
+        self,
+        is_list=False,
+    ):
+        if self._field_name is not None:
+            self._verify_field_is_model(self._field_name)
+            return self._field_name
+
+        def match_model_type(field_info: tuple[str, Any, bool]):
+            (_, field_type, is_many_relation) = field_info
+            return field_type is self.model and is_list == is_many_relation
+
+        parent_field_names = [
+            field_name
+            for field_name, _, _ in filter(
+                match_model_type, self._parent.model.fields(include_relations=True)
             )
-            if parent_key is None or model_of_key is None:
-                raise HasuraClientError(
-                    f"Invalid sub-query. The provided key `{self._key}` not found on "
-                    f"model `{parent_model}`"
-                )
-            elif model_of_key.type_ is not self.model:
-                raise HasuraClientError(
-                    f"Invalid sub-query. The provided model `{self.model}` "
-                    f"does not match expected model `{model_of_key.type_}`"
-                )
-            return parent_key
+        ]
 
-        def find_model_attrs_by_type(
-            matching_keys: list[str], dict_items: tuple[str, ModelField]
-        ):
-            key, value = dict_items
-            if value.type_ is self.model:
-                if is_list:
-                    if get_origin(value.annotation) is Union and any(
-                        [get_origin(sub) is list for sub in get_args(value.annotation)]
-                    ):
-                        matching_keys.append(key)
-                else:
-                    matching_keys.append(key)
-            return matching_keys
-
-        matching_keys: list[str] = reduce(
-            find_model_attrs_by_type,
-            parent_model.__fields__.items(),
-            [],
-        )
-
-        if len(matching_keys) == 0:
+        if len(parent_field_names) == 0:
             raise HasuraClientError(
                 "Invalid sub-query. Could not find any reference to "
                 + (f"List[{self.model}]" if is_list else f"{self.model}")
-                + f" in {parent_model}"
+                + f" in {self._parent.model}"
             )
-        elif len(matching_keys) == 1:
-            return matching_keys[0]
-        else:
+        if len(parent_field_names) > 1:
             raise HasuraClientError(
-                f"Ambiguous sub query. Candidates: {matching_keys}. "
-                "Use the `key` argument to select one."
+                f"Ambiguous sub query. Candidates: {parent_field_names}. "
+                "Use the `field_name` argument to select one."
+            )
+
+        return parent_field_names.pop()
+
+    def _verify_field_is_model(self, field_name):
+        field_type = self._parent.model.type_of(field_name, include_relations=True)
+        if field_type is None:
+            raise HasuraClientError(
+                f"Invalid sub-query. The provided `field_name={field_name}` does "
+                f"not exist on model `{self._parent.model}`."
+            )
+        if field_type is not self.model:
+            raise HasuraClientError(
+                f"Invalid sub-query. The provided model `{self.model}` "
+                f"does not match expected model `{field_type}`."
             )
 
 

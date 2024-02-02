@@ -3,13 +3,13 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from cuckoo.models.aggregate import AggregateResponse
-from cuckoo.models.common import (
+from cuckoo.models import (
+    AggregateResponse,
+    CreatableModel,
+    DeletableModel,
     HasuraTableModel,
     IdentityModel,
-    CreatableModel,
     UpdatableModel,
-    DeletableModel,
 )
 
 if TYPE_CHECKING:

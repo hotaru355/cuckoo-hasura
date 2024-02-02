@@ -1,12 +1,13 @@
 from typing import Callable
 from uuid import UUID
+
 from httpx import AsyncClient, Client
-from pytest import fixture, raises, mark
+from pytest import fixture, mark, raises
 
 from cuckoo import Include, Query
 from cuckoo.delete import Delete
 from cuckoo.errors import HasuraClientError
-from cuckoo.models.aggregate import Aggregate
+from cuckoo.models import Aggregate
 from tests.fixture.common_fixture import (
     FinalizeParams,
     FinalizeReturning,
@@ -21,11 +22,11 @@ from tests.fixture.include_fixture import (
     SUGAR_FUNCTIONS,
 )
 from tests.fixture.sample_models.public import (
+    Address,
+    Article,
+    Author,
     AuthorDetail,
     Comment,
-    Address,
-    Author,
-    Article,
 )
 
 
@@ -45,7 +46,7 @@ class TestOne:
             session=session,
             session_async=session_async,
             columns=[
-                Include(Address, key="primary_address")
+                Include(Address, field_name="primary_address")
                 .one()
                 .returning(columns=["street"])
             ],
@@ -57,7 +58,7 @@ class TestOne:
             session=session,
             session_async=session_async,
             columns=[
-                Include(Address, key="secondary_address")
+                Include(Address, field_name="secondary_address")
                 .one()
                 .returning(columns=["street"])
             ],
@@ -82,11 +83,12 @@ class TestOne:
                 ),
                 session=session,
                 session_async=session_async,
-                columns=[Include(Address, key="INVALID").one().returning()],
+                columns=[Include(Address, field_name="INVALID").one().returning()],
             )
 
         assert (
-            "Invalid sub-query. The provided key `INVALID` not found on model "
+            "Invalid sub-query. "
+            "The provided `field_name=INVALID` does not exist on model "
             "`<class 'tests.fixture.sample_models.public.author_detail.AuthorDetail'>`"
         ) in str(err)
 
@@ -104,7 +106,9 @@ class TestOne:
                 ),
                 session=session,
                 session_async=session_async,
-                columns=[Include(Comment, key="primary_address").one().returning()],
+                columns=[
+                    Include(Comment, field_name="primary_address").one().returning()
+                ],
             )
 
         assert (
@@ -157,7 +161,7 @@ class TestOne:
         assert (
             "Ambiguous sub query. "
             "Candidates: ['primary_address', 'secondary_address']. "
-            "Use the `key` argument to select one."
+            "Use the `field_name` argument to select one."
         ) in str(err)
 
     async def test_raises_error_if_including_invalid_object(

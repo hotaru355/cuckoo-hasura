@@ -2,26 +2,27 @@ import logging
 from logging import LogRecord
 from typing import Any, Callable, Iterable, cast
 from uuid import UUID, uuid4
+
 from httpx import AsyncClient, Client
+from pytest import LogCaptureFixture, fixture, mark, raises
 
-from pytest import fixture, mark, raises, LogCaptureFixture
-
-from cuckoo import Query
+from cuckoo import TCOLUMNS, Query
 from cuckoo.errors import HasuraServerError, RecordNotFoundError
-from cuckoo.models.aggregate import Aggregate, AggregateResponse
+from cuckoo.models import Aggregate, AggregateResponse
 from tests.fixture.common_fixture import (
     ARTICLE_COMMENT_CONDITIONALS,
+    FinalizeAggregate,
     FinalizeParams,
     FinalizeReturning,
-    FinalizeAggregate,
     FinalizeWithNodes,
 )
 from tests.fixture.common_utils import (
     DEFAULT_COUNTS,
     all_columns,
-    delete_all,
-    persist_authors,
     assert_authors_ordered,
+    delete_all,
+    generate_author_data,
+    persist_authors,
 )
 from tests.fixture.query_fixture import (
     AUTHOR_AGGREGATES,
@@ -29,9 +30,13 @@ from tests.fixture.query_fixture import (
     AUTHOR_CONDITIONALS,
     SUGAR_FUNCTIONS,
 )
-from tests.fixture.sample_models.public.author import Author, AuthorBase, AuthorNumerics
-from tests.fixture.sample_models.public.article import Article
-from tests.fixture.sample_models.public.comment import Comment
+from tests.fixture.sample_models.public import (
+    Article,
+    Author,
+    AuthorBase,
+    AuthorNumerics,
+    Comment,
+)
 
 
 @mark.parametrize(**FinalizeParams(Query).returning_one())
@@ -96,6 +101,72 @@ class TestOneByPK:
         )
 
         assert_authors_ordered([actual_author], [expected_author])
+
+    @mark.parametrize(
+        argnames=["columns", "invert_selection", "get_expected_author"],
+        argvalues=[
+            (
+                None,
+                False,
+                lambda author: author.copy(include={"uuid"}),
+            ),
+            (
+                ["name"],
+                False,
+                lambda author: author.copy(include={"name"}),
+            ),
+            (
+                ["name"],
+                True,
+                lambda author: author.copy(
+                    exclude={"name", "articles", "articles_aggregate", "detail"}
+                ),
+            ),
+            (
+                [],
+                True,
+                lambda author: author.copy(
+                    exclude={"articles", "articles_aggregate", "detail"}
+                ),
+            ),
+            (
+                None,
+                True,
+                lambda author: author.copy(
+                    exclude={"articles", "articles_aggregate", "detail"}
+                ),
+            ),
+        ],
+        ids=[
+            "default column",
+            "one column",
+            "all but one column",
+            "all columns, empty selection",
+            "all columns, no selection",
+        ],
+    )
+    async def test_returning_columns(
+        self,
+        finalize: FinalizeReturning[Query, Author],
+        persisted_authors: list[Author],
+        columns: TCOLUMNS,
+        invert_selection: bool,
+        get_expected_author: Callable[[Author], Author],
+        session: Client,
+        session_async: AsyncClient,
+    ):
+        some_author = persisted_authors[7]
+        expected = get_expected_author(some_author)
+
+        actual = await finalize(
+            run_test=lambda Query: Query(Author).one_by_pk(uuid=some_author.uuid),
+            columns=columns,
+            invert_selection=invert_selection,
+            session=session,
+            session_async=session_async,
+        )
+
+        assert_authors_ordered([actual], [expected])
 
     async def test_successful_query_gets_logged(
         self,
@@ -844,3 +915,11 @@ def persisted_authors_with_counts(persisted_authors: list[Author]):
         )
         for author in persisted_authors
     ]
+
+    # persisted_author = InsertAuthor(
+    #     **generate_author_data(
+    #         user_uuid=user_uuid,
+    #         num_authors=1,
+    #         num_articles=0,
+    #     )[0]
+    # )

@@ -1,3 +1,4 @@
 -r requirements.txt
 black==23.*
 mypy==1.*
+Sphinx==7.*

@@ -2,8 +2,7 @@ from typing import Generic, Optional, TypeVar
 
 from pydantic.generics import GenericModel
 
-from cuckoo.models.common import TMODEL
-
+from cuckoo.models import TMODEL
 
 TNUM_PROPS = TypeVar("TNUM_PROPS")
 TMODEL_BASE = TypeVar("TMODEL_BASE")

@@ -7,7 +7,7 @@ class TestHasuraTableModel:
             "name": "test",
             "detail": {
                 "data": {
-                    "detail": "detail 1",
+                    "country": "some country",
                 }
             },
             "articles": {
@@ -17,10 +17,10 @@ class TestHasuraTableModel:
                         "comments": {
                             "data": [
                                 {
-                                    "comment": "comment 1-1",
+                                    "content": "comment 1-1",
                                 },
                                 {
-                                    "comment": "comment 1-2",
+                                    "content": "comment 1-2",
                                 },
                             ]
                         },
@@ -30,10 +30,10 @@ class TestHasuraTableModel:
                         "comments": {
                             "data": [
                                 {
-                                    "comment": "comment 2-1",
+                                    "content": "comment 2-1",
                                 },
                                 {
-                                    "comment": "comment 2-2",
+                                    "content": "comment 2-2",
                                 },
                             ]
                         },
@@ -45,13 +45,13 @@ class TestHasuraTableModel:
         actual = Author(
             name="test",
             detail=AuthorDetail(
-                detail="detail 1",
+                country="some country",
             ),
             articles=[
                 Article(
                     title=f"title {article_idx}",
                     comments=[
-                        Comment(comment=f"comment {article_idx}-{comment_idx}")
+                        Comment(content=f"comment {article_idx}-{comment_idx}")
                         for comment_idx in range(1, 3)
                     ],
                 )
