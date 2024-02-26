@@ -1,9 +1,9 @@
 from typing import Generator
 
-from pytest import raises, mark
 from geojson_pydantic import Point
+from pytest import mark, raises
 
-from cuckoo.utils import Prop, grouper, to_truncated_str, to_sql_function_args
+from cuckoo.utils import Prop, grouper, to_sql_function_args, to_truncated_str
 
 
 class TestToTruncatedStr:
@@ -24,6 +24,7 @@ class TestToTruncatedStr:
         assert actual == expected
 
 
+@mark.asyncio(scope="session")
 class TestGrouper:
     def test_group_size_is_smaller_than_iterable_and_evenly_divisible(self):
         test_iterable = [1, 2, 3, 4, 5, 6]
@@ -74,6 +75,7 @@ class TestGrouper:
             grouper(test_iterable, 3.5)  # type: ignore
 
 
+@mark.asyncio(scope="session")
 class TestToSqlFunctionArgs:
     @mark.parametrize(
         argnames=["args", "expected"],

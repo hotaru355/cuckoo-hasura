@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from tenacity.stop import StopBaseT
     from tenacity.wait import WaitBaseT
 
+HASURA_PORT = int(os.environ.get("HASURA_PORT", "8080"))
+HASURA_HEALTH_URL = os.environ.get("HASURA_HEALTH_URL", "")
 HASURA_URL = os.environ["HASURA_URL"]
 HASURA_ADMIN_SECRET = os.environ["HASURA_ADMIN_SECRET"]
 HASURA_ROLE = os.environ["HASURA_ROLE"]

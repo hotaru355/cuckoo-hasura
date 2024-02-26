@@ -1,11 +1,17 @@
 from typing import Any, Callable
 from uuid import UUID, uuid4
-from httpx import AsyncClient, Client
 
+from httpx import AsyncClient, Client
 from pytest import fixture, mark, raises
 
-from cuckoo import Update, Include
+from cuckoo import Update
 from cuckoo.errors import RecordNotFoundError
+from tests.fixture.common_fixture import (
+    ARTICLE_COMMENT_CONDITIONALS,
+    FinalizeAffectedRows,
+    FinalizeParams,
+    FinalizeReturning,
+)
 from tests.fixture.common_utils import (
     all_columns,
     assert_authors_ordered,
@@ -13,20 +19,15 @@ from tests.fixture.common_utils import (
     delete_all,
     persist_authors,
 )
-from tests.fixture.common_fixture import (
-    ARTICLE_COMMENT_CONDITIONALS,
-    FinalizeAffectedRows,
-    FinalizeReturning,
-    FinalizeParams,
-)
+from tests.fixture.sample_models import Author
 from tests.fixture.update_fixture import (
     AUTHOR_ARTICLE_COMMENT_CONDITIONALS,
-    UPDATE_DISTINCT_ARGS,
     UPDATE_ARGS,
+    UPDATE_DISTINCT_ARGS,
 )
-from tests.fixture.sample_models import Author, AuthorDetail, Comment, Article
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Update).returning_one())
 class TestOneByPK:
     @mark.parametrize(**UPDATE_ARGS)
@@ -154,6 +155,7 @@ class TestOneByPK:
         assert actual_author.uuid == persisted_authors[0].uuid
 
 
+@mark.asyncio(scope="session")
 class TestMany:
     @mark.parametrize(**FinalizeParams(Update).returning_many())
     @mark.parametrize(**UPDATE_ARGS)
@@ -283,6 +285,7 @@ class TestMany:
         assert actual_affected_rows == expected_affected_rows
 
 
+@mark.asyncio(scope="session")
 class TestManyDistinct:
     @mark.parametrize(**FinalizeParams(Update).returning_many_distinct())
     @mark.parametrize(**UPDATE_DISTINCT_ARGS)

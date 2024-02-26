@@ -14,24 +14,79 @@ keywords = []
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    "Operating System :: OS Independent"
 ]
 dependencies = [
     "httpx>=0.24.0",
     "orjson>=3.0.0",
     "pydantic>=1.0.0,<2.0.0",
-    "tenacity>=8.0.0",
+    "tenacity>=8.0.0"
 ]
-
 [project.urls]
 "Homepage" = "https://github.com/hotaru355/cuckoo-hasura"
 "Bug Tracker" = "https://github.com/hotaru355/cuckoo-hasura/issues"
-
 [project.scripts]
 codegen = "codegen.graphql_2_python:run_cli"
-
 [project.optional-dependencies]
 codegen = ["case-converter>=1.1.0", "graphql-core>=3.2.3"]
 
+### COVERAGE
+[tool.coverage.run]
+branch = true
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration:
+exclude_also = [
+    # Don't complain if line is marked by flag:
+    "pragma: no cover",
+    # Don't complain if tests don't hit defensive assertion code:
+    "raise AssertionError",
+    "raise NotImplementedError",
+    # Don't complain if non-runnable code isn't run:
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:"
+]
+# Target is 95%
+fail_under = 98
+skip_empty = true
+omit = [
+    # omit test files:
+    "*/tests/*",
+    # omit init files:
+    "*/__init__.py",
+    # foreign code:
+    "cuckoo/encoders.py"
+]
+show_missing = true
+[tool.coverage.xml]
+output = "/tmp/coverage.xml"
+
+### PYTEST
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--ignore-glob=**/fixture/*"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "performance: marks a performance test (deselect with '-m \"not performance\"')"
+]
+[tool.pytest-watcher]
+now = true
+clear = true
+delay = 0.2
+runner = "pytest"
+runner_args = ["-x", "-vv", "-s"]
+patterns = ["*.py"]
+ignore_patterns = []
+
+### RUFF
+[tool.ruff.lint]
+ignore-init-module-imports = true
+[tool.ruff.lint.per-file-ignores]
+# Don't complain if `__init__.py` contains unused imports:
+"__init__.py" = ["F401"]
+# Don't complain if files in `tests` folder use `import * from ...`:
+"tests/*" = ["F403"]
+
+### SETUPTOOLS
 [tool.setuptools]
 packages = ["cuckoo", "cuckoo.models", "codegen"]
+

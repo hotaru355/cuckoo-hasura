@@ -30,6 +30,7 @@ from tests.fixture.sample_models.public import (
 )
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Query).returning_one())
 class TestOne:
     async def test_can_include_by_key_for_model_with_ambiguous_submodels(
@@ -187,6 +188,7 @@ class TestOne:
         ) in str(err)
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Query).returning_one())
 class TestAggregate:
     @mark.parametrize(**ARTICLE_AGGREGATES)

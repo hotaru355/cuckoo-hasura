@@ -21,7 +21,6 @@ from tests.fixture.common_utils import (
     all_columns,
     assert_authors_ordered,
     delete_all,
-    generate_author_data,
     persist_authors,
 )
 from tests.fixture.query_fixture import (
@@ -39,6 +38,7 @@ from tests.fixture.sample_models.public import (
 )
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Query).returning_one())
 class TestOneByPK:
     async def test_finding_a_model_if_record_exists(
@@ -242,6 +242,7 @@ class TestOneByPK:
         assert "field 'does_not_exist' not found in type: 'authors'" in record.msg
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Query).returning_many())
 class TestMany:
     async def test_finding_all_records_with_default_column_if_no_condition_is_provided(
@@ -326,6 +327,7 @@ class TestMany:
         assert_authors(actual_authors, expected_authors)
 
 
+@mark.asyncio(scope="session")
 class TestAggregate:
     @mark.parametrize(**FinalizeParams(Query).aggregate())
     @mark.parametrize(**AUTHOR_AGGREGATES)
@@ -452,6 +454,7 @@ class TestAggregate:
         assert get_value(actual) == expected
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Query).returning_one())
 class TestOneFunction:
     async def test_finding_one_record_with_default_arg_matching_record(
@@ -543,6 +546,7 @@ class TestOneFunction:
         assert_authors_ordered([actual_author], [expected_author])
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Query).returning_many())
 class TestManyFunction:
     async def test_finding_all_records_with_default_arg_matching_records(
@@ -636,6 +640,7 @@ class TestManyFunction:
         assert_authors(actual_authors, expected_authors)
 
 
+@mark.asyncio(scope="session")
 class TestAggregateFunction:
     @mark.parametrize(**FinalizeParams(Query).aggregate())
     @mark.parametrize(**AUTHOR_AGGREGATES)
@@ -776,6 +781,7 @@ class TestAggregateFunction:
         assert get_value(actual) == expected
 
 
+@mark.asyncio(scope="session")
 class TestBatch:
     async def test_mixing_multiple_queries(
         self,

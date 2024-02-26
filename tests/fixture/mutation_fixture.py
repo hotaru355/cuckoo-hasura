@@ -7,15 +7,15 @@ from cuckoo import Query
 from cuckoo.delete import BatchDelete
 from cuckoo.insert import BatchInsert
 from cuckoo.update import BatchUpdate
+from tests.fixture.common_fixture import (
+    ParameterizeArgs,
+)
 from tests.fixture.common_utils import (
     all_columns,
     assert_authors_ordered,
     assert_authors_unordered,
 )
-from tests.fixture.common_fixture import (
-    ParameterizeArgs,
-)
-from tests.fixture.sample_models.public import Author, AuthorDetail, Article, Comment
+from tests.fixture.sample_models.public import Article, Author, AuthorDetail, Comment
 
 
 def insert_one(persisted_authors: list[Author], session: Client):
@@ -141,7 +141,7 @@ def insert_many(persisted_authors: list[Author], session: Client):
             Generator[Author, None, None],
             Generator[int, None, None],
             tuple[Generator[Author, None, None], Generator[int, None, None]],
-        ]
+        ],
     ):
         # .yielding
         actual_authors = list(actual_author_results[0])
@@ -173,8 +173,9 @@ def insert_many(persisted_authors: list[Author], session: Client):
         assert actual_num == 160, "5 authors + 5 details + 25 articles + 125 comments"
 
         # .yielding_with_rows
-        actual_authors, actual_num = list(actual_author_results[2][0]), next(
-            actual_author_results[2][1]
+        actual_authors, actual_num = (
+            list(actual_author_results[2][0]),
+            next(actual_author_results[2][1]),
         )
         expected_authors = (
             Query(Author, session=session)
@@ -280,7 +281,7 @@ def update_many(persisted_authors: list[Author], session: Client):
             Generator[Author, None, None],
             Generator[int, None, None],
             tuple[Generator[Author, None, None], Generator[int, None, None]],
-        ]
+        ],
     ):
         # .yielding
         actual_authors = list(actual_author_results[0])
@@ -305,8 +306,9 @@ def update_many(persisted_authors: list[Author], session: Client):
         ), f"Expected: {len(authors_affected_rows)} authors\nFound: {actual_num}"
 
         # .yielding_with_rows
-        actual_authors, actual_num = list(actual_author_results[2][0]), next(
-            actual_author_results[2][1]
+        actual_authors, actual_num = (
+            list(actual_author_results[2][0]),
+            next(actual_author_results[2][1]),
         )
         expected_authors = (
             Query(Author, session=session)
@@ -390,7 +392,7 @@ def update_many_distinct(persisted_authors: list[Author], session: Client):
                 None,
                 None,
             ],
-        ]
+        ],
     ):
         # .yielding
         expected_authors = (
@@ -477,13 +479,15 @@ def delete_one(persisted_authors: list[Author], session: Client):
                 uuid=author_to_delete.uuid,
             )
             .yielding(
-                columns=[
-                    "uuid",
-                    "name",
-                    "age",
-                    "jsonb_list",
-                    "jsonb_dict",
-                ]
+                columns=[],
+                invert_selection=True,
+                # columns=[
+                #     "uuid",
+                #     "name",
+                #     "age",
+                #     "jsonb_list",
+                #     "jsonb_dict",
+                # ]
             )
         )
 
@@ -499,15 +503,16 @@ def delete_one(persisted_authors: list[Author], session: Client):
             )
             .count()
         ) == 0
-        assert actual_author.dict(exclude_unset=True) == author_to_delete.dict(
-            include={
-                "uuid",
-                "name",
-                "age",
-                "jsonb_list",
-                "jsonb_dict",
-            }
-        )
+        assert actual_author == author_to_delete
+        # assert actual_author.dict(exclude_unset=True) == author_to_delete.dict(
+        #     include={
+        #         "uuid",
+        #         "name",
+        #         "age",
+        #         "jsonb_list",
+        #         "jsonb_dict",
+        #     }
+        # )
 
     return run_mutation, assert_model
 
@@ -529,23 +534,12 @@ def delete_many(persisted_authors: list[Author], session: Client):
 
         return (
             get_delete(authors_yielding).yielding(
-                columns=[
-                    "uuid",
-                    "name",
-                    "age",
-                    "jsonb_list",
-                    "jsonb_dict",
-                ]
+                columns=[],
+                invert_selection=True,
             ),
             get_delete(authors_affected_rows).yield_affected_rows(),
             get_delete(authors_with_rows).yielding_with_rows(
-                columns=[
-                    "uuid",
-                    "name",
-                    "age",
-                    "jsonb_list",
-                    "jsonb_dict",
-                ]
+                columns=[], invert_selection=True
             ),
         )
 
@@ -554,7 +548,7 @@ def delete_many(persisted_authors: list[Author], session: Client):
             Generator[Author, None, None],
             Generator[int, None, None],
             tuple[Generator[Author, None, None], Generator[int, None, None]],
-        ]
+        ],
     ):
         # .yielding
         actual_authors = list(actual_author_results[0])
@@ -586,8 +580,9 @@ def delete_many(persisted_authors: list[Author], session: Client):
         ), f"Expected: {len(authors_affected_rows)} authors\nFound: {actual_num}"
 
         # .yielding_with_rows
-        actual_authors, actual_num = list(actual_author_results[2][0]), next(
-            actual_author_results[2][1]
+        actual_authors, actual_num = (
+            list(actual_author_results[2][0]),
+            next(actual_author_results[2][1]),
         )
         assert (
             Query(Author, session=session)

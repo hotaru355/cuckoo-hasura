@@ -1,8 +1,8 @@
 import asyncio
 from typing import Any, Callable, Type
 from uuid import UUID, uuid4
-from geojson_pydantic import Point, Polygon
 
+from geojson_pydantic import Polygon
 from httpx import AsyncClient, Client
 from pytest import fixture, mark, raises
 
@@ -11,7 +11,6 @@ from cuckoo.delete import BatchDelete
 from cuckoo.errors import HasuraClientError
 from cuckoo.insert import BatchInsert
 from cuckoo.update import BatchUpdate
-
 from tests.fixture.common_fixture import (
     ARTICLE_COMMENT_CONDITIONALS,
     FinalizeParams,
@@ -30,10 +29,11 @@ from tests.fixture.query_fixture import (
 from tests.fixture.sample_models import Author
 
 
+@mark.asyncio(scope="session")
 class TestBatch:
     @mark.parametrize(**MUTATIONS1)
     @mark.parametrize(**MUTATIONS2)
-    def test_two_mutations_in_batch(
+    async def test_two_mutations_in_batch(
         self,
         persisted_authors: list[Author],
         run_and_assert1: Callable[
@@ -134,7 +134,7 @@ class TestBatch:
         assert_model1(actual1)
         assert_model2(actual2)
 
-    def test_raises_client_error_when_trying_to_access_result_of_unexecuted_batch(
+    async def test_raises_client_error_when_trying_to_access_result_of_unexecuted_batch(
         self,
         session: Client,
     ):
@@ -150,6 +150,7 @@ class TestBatch:
         )
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Mutation).returning_one())
 class TestOneFunction:
     async def test_mutating_one_record_with_provided_arg_matching_record(
@@ -327,6 +328,7 @@ class TestOneFunction:
         assert_authors_ordered([actual_author], [expected_author])
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Mutation).returning_many())
 class TestManyFunction:
     async def test_mutating_records_with_provided_arg_matching_records(
