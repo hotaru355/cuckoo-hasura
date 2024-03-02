@@ -1,13 +1,8 @@
 from datetime import datetime
-from typing import Optional, TypeVar
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Extra
-
-TNUM_PROPS = TypeVar("TNUM_PROPS")
-TMODEL_BASE = TypeVar("TMODEL_BASE")
-TBATCHNUM_PROPS = TypeVar("TBATCHNUM_PROPS")
-TBATCHMODEL_BASE = TypeVar("TBATCHMODEL_BASE")
 
 
 class IdentityModel(BaseModel):

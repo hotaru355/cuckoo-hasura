@@ -118,7 +118,7 @@ class TestOneByPK:
     ):
         some_author = persisted_authors[0]
         expected_author = get_expected_author(some_author)
-        expected_author.name = "updated"
+        expected_author.name = "updated"  # do not put in fixture, as fixture is shared
 
         actual_author = await finalize(
             run_test=lambda Update: Update(Author).one_by_pk(
@@ -133,7 +133,13 @@ class TestOneByPK:
             session_async=session_async,
         )
 
-        assert_authors_ordered([actual_author], [expected_author])
+        assert_authors_ordered(
+            [actual_author.copy(exclude={"updated_at"})],
+            [expected_author.copy(exclude={"updated_at"})],
+        )
+        assert actual_author.updated_at is not None
+        assert expected_author.updated_at is not None
+        assert actual_author.updated_at > expected_author.updated_at
 
     async def test_returning_default_column(
         self,

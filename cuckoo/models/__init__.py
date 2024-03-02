@@ -1,21 +1,23 @@
-from .common import (
+from .builtins import (
+    TBATCH_MODEL,
     TBATCHMODEL_BASE,
     TBATCHNUM_PROPS,
+    TMODEL,
     TMODEL_BASE,
     TNUM_PROPS,
+    Aggregate,
+    AggregateResponse,
+    TableModel,
+)
+from .common import (
     CreatableModel,
     DeletableModel,
     IdentityModel,
     UntypedModel,
     UpdatableModel,
 )
-from .table import (
-    TBATCH_MODEL,
-    TMODEL,
-    Aggregate,
-    AggregateResponse,
+from .providers import (
     PydanticV1TableModel,
-    TableModel,
 )
 
 HasuraTableModel = PydanticV1TableModel

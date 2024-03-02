@@ -37,14 +37,14 @@ def is_hasura_responsive():
         return False
 
 
-@fixture(scope="session", autouse=True)
-def hasura_service(docker_services: Services):
-    """Ensure that Hasura service is up and responsive."""
+# @fixture(scope="session", autouse=True)
+# def hasura_service(docker_services: Services):
+#     """Ensure that Hasura service is up and responsive."""
 
-    docker_services.wait_until_responsive(
-        timeout=60, pause=5, check=is_hasura_responsive
-    )
-    return HASURA_URL
+#     docker_services.wait_until_responsive(
+#         timeout=60, pause=5, check=is_hasura_responsive
+#     )
+#     return HASURA_URL
 
 
 @fixture(scope="module")
