@@ -687,6 +687,7 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             lambda author: {},
             lambda author: author.copy(
                 update={
+                    "name": "updated",
                     "articles": [
                         article.copy(
                             update={
@@ -712,6 +713,7 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             },
             lambda author: author.copy(
                 update={
+                    "name": "updated",
                     "articles": [
                         author.articles[3].copy(
                             update={
@@ -735,6 +737,7 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             },
             lambda author: author.copy(
                 update={
+                    "name": "updated",
                     "articles": [
                         article.copy(
                             update={
@@ -764,6 +767,7 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             },
             lambda author: author.copy(
                 update={
+                    "name": "updated",
                     "articles": [
                         author.articles[4].copy(
                             update={
@@ -805,6 +809,7 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             },
             lambda author: author.copy(
                 update={
+                    "name": "updated",
                     "articles": [
                         author.articles[1].copy(
                             update={
@@ -852,6 +857,7 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             },
             lambda author: author.copy(
                 update={
+                    "name": "updated",
                     "articles": [
                         author.articles[3].copy(
                             update={
@@ -921,6 +927,7 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             },
             lambda author: author.copy(
                 update={
+                    "name": "updated",
                     "articles": [
                         author.articles[4].copy(
                             update={

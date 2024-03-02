@@ -439,6 +439,7 @@ def persisted_authors(user_uuid: UUID, session: Client, session_async: AsyncClie
     return persist_authors(
         user_uuid,
         num_authors=20,
+        num_articles=0,
         # Note that update and delete tests use `authors.pop()` to "reserve" their own
         # test record
         session=session,

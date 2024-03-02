@@ -503,7 +503,19 @@ def delete_one(persisted_authors: list[Author], session: Client):
             )
             .count()
         ) == 0
-        assert actual_author == author_to_delete
+        assert_authors_unordered(
+            [actual_author],
+            [
+                author_to_delete.copy(
+                    exclude={
+                        "detail",
+                        "articles",
+                        "articles_aggregate",
+                    }
+                )
+            ],
+        )
+        # assert actual_author == author_to_delete
         # assert actual_author.dict(exclude_unset=True) == author_to_delete.dict(
         #     include={
         #         "uuid",

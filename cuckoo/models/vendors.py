@@ -1,91 +1,15 @@
-from abc import ABC, abstractmethod
 from functools import reduce
 from inspect import isclass
 from typing import (
     Any,
-    Generator,
-    Generic,
-    Optional,
-    TypeVar,
     Union,
     get_args,
     get_origin,
 )
 
-from pydantic import BaseModel, Extra
 from pydantic.fields import ModelField
-from pydantic.generics import GenericModel
 
-
-class TableModel(BaseModel, ABC):
-    _table_name: str
-    """The name of the table in the database."""
-    # @property
-    # @abstractmethod
-    # def _table_name(self) -> str:
-    # ...
-
-    @classmethod
-    @abstractmethod
-    def fields(
-        cls,
-        include_inherited=True,
-        include_relations=False,
-    ) -> Generator[tuple[str, Any, bool], Any, None]:
-        ...
-
-    @abstractmethod
-    def to_hasura_input(self) -> dict[str, Any]:
-        ...
-
-    @classmethod
-    def type_of(
-        cls,
-        field_name: str,
-        include_inherited=True,
-        include_relations=False,
-    ):
-        _, field_type, _ = next(
-            filter(
-                lambda iter_field_name: iter_field_name[0] == field_name,
-                cls.fields(
-                    include_inherited=include_inherited,
-                    include_relations=include_relations,
-                ),
-            ),
-            (None, None, None),
-        )
-        return field_type
-
-    class Config:
-        extra = Extra.allow
-
-
-TMODEL = TypeVar("TMODEL", bound=TableModel)
-TBATCH_MODEL = TypeVar("TBATCH_MODEL", bound=TableModel)
-TNUM_PROPS = TypeVar("TNUM_PROPS")
-TMODEL_BASE = TypeVar("TMODEL_BASE")
-TBATCHNUM_PROPS = TypeVar("TBATCHNUM_PROPS")
-TBATCHMODEL_BASE = TypeVar("TBATCHMODEL_BASE")
-
-
-class Aggregate(GenericModel, Generic[TMODEL_BASE, TNUM_PROPS]):
-    count: Optional[int]
-    avg: Optional[TNUM_PROPS]
-    max: Optional[TMODEL_BASE]
-    min: Optional[TMODEL_BASE]
-    stddev: Optional[TNUM_PROPS]
-    stddev_pop: Optional[TNUM_PROPS]
-    stddev_samp: Optional[TNUM_PROPS]
-    sum: Optional[TNUM_PROPS]
-    var_pop: Optional[TNUM_PROPS]
-    var_samp: Optional[TNUM_PROPS]
-    variance: Optional[TNUM_PROPS]
-
-
-class AggregateResponse(GenericModel, Generic[TMODEL_BASE, TNUM_PROPS, TMODEL]):
-    aggregate: Optional[Aggregate[TMODEL_BASE, TNUM_PROPS]]
-    nodes: Optional[list[TMODEL]]
+from .buildins import AggregateResponse, TableModel
 
 
 class PydanticV1TableModel(TableModel):
