@@ -11,6 +11,8 @@ from typing import (
     Union,
 )
 
+import httpx
+import ijson
 from typing_extensions import NotRequired
 
 from cuckoo.binary_tree_node import (
@@ -26,6 +28,29 @@ from cuckoo.models import TMODEL, TMODEL_BASE, TNUM_PROPS, Aggregate
 
 if TYPE_CHECKING:
     from cuckoo.include import TCOLUMNS, TINCLUDE
+
+
+import itertools as it
+from io import TextIOBase
+
+
+class IterStringIO(TextIOBase):
+    def __init__(self, iterable=None):
+        iterable = iterable or []
+        self.iter = it.chain.from_iterable(iterable)
+
+    def not_newline(self, s):
+        return s not in {"\n", "\r", "\r\n"}
+
+    def read(self, n=None):
+        chunk = it.islice(self.iter, None, n)
+        # print("N", n, "".join(chunk))
+
+        return "".join(chunk)
+
+    def readline(self, n=None):
+        to_read = it.takewhile(self.not_newline, self.iter)
+        return bytearray(it.islice(to_read, None, n))
 
 
 class CountDict(TypedDict):
@@ -204,9 +229,43 @@ class YieldingFinalizer(
         resolved_columns = self._resolve_column_selection(columns, invert_selection)
         self._node._fragments.response_keys.append(self._response_key(resolved_columns))
         ExecutingFinalizer._bind_includes(self._node)
-        self._execute()
+        # self._execute()
 
-        return self._returning_fn()
+        query = str(self._node._root)
+        variables = self._node._root._get_all_variables()
+        json = {"query": self._node._root._compact(query)}
+        if variables:
+            json["variables"] = self._node._root._jsonify_variables(variables)
+
+        with httpx.stream(
+            method="POST",
+            url=self._node._root._config["url"],
+            headers=self._node._root._config["headers"],
+            json=json,
+            timeout=60,
+        ) as response:
+            print("DD", response)
+            # for t in response.iter_text():
+            #     print("D", t)
+            #     yield t
+            backend = ijson.get_backend("yajl2_c")
+            parser = ijson.parse(IterStringIO(response.iter_text()))
+            for prefix, event, value in parser:
+                if prefix == "data.aggregate.count":
+                    yield "count", value
+                elif prefix == "data.aggregate.nodes.item":
+                    yield "nodes", value
+            # for key, value in backend.kvitems(
+            #     IterStringIO(response.iter_text()), "data"
+            # ):
+            #     print("KEY ", key, type(value))
+            # for item in backend.items(
+            #     IterStringIO(response.iter_text(1000)), "data.var1.item"
+            # ):
+            # yield self._node._root.model(**item)
+            yield self._node._root.model()
+
+        # return self._returning_fn()
 
 
 class ReturningFinalizer(

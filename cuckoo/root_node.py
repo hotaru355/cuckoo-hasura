@@ -8,6 +8,8 @@ from typing import (
     Union,
 )
 
+import httpx
+import ijson
 import orjson
 from httpx import AsyncClient, Client, Response
 from pydantic import BaseModel
@@ -130,6 +132,33 @@ class RootNode(BinaryTreeNode[TMODEL]):
             raise NotImplementedError(
                 "response dict did not contain any errors nor data."
             )
+
+    def _stream(self: RootNode):
+        query = str(self)
+        variables = self._get_all_variables()
+        json = {"query": self._compact(query)}
+        if variables:
+            json["variables"] = RootNode._jsonify_variables(variables)
+
+        if self._logger:
+            self._logger.debug(
+                f"Executing query through http stream. query={self._compact(query)}, "
+                f"variables={to_truncated_str(variables)}."
+            )
+
+        def _stream_iter():
+            with httpx.stream(
+                method="POST",
+                url=self._config["url"],
+                headers=self._config["headers"],
+                json=json,
+            ) as response:
+                return (
+                    self.model(item)
+                    for item in ijson.items(response.iter_bytes(), "data.item")
+                )
+
+        return _stream_iter
 
     def _execute(self: RootNode):
         query = str(self)

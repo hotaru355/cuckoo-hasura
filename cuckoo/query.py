@@ -311,9 +311,10 @@ class InnerQuery(
         yield self.model(**data)
 
     def _build_many_models(self):
-        data_list: list[dict] = self._root._get_response(self._query_alias)
-        for data in data_list:
-            yield self.model(**data)
+        return self._root._response_data
+        # data_list: list[dict] = self._root._get_response(self._query_alias)
+        # for data in data_list:
+        #     yield self.model(**data)
 
     def _build_aggregate(self):
         response: dict[str, Any] = self._root._get_response(

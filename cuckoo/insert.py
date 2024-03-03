@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from logging import Logger
 from typing import (
     Any,
@@ -8,11 +9,10 @@ from typing import (
     Type,
     TypedDict,
 )
-from typing_extensions import NotRequired
 
 from httpx import AsyncClient, Client
+from typing_extensions import NotRequired
 
-from cuckoo.root_node import BinaryTreeNode, RootNode
 from cuckoo.constants import CuckooConfig
 from cuckoo.errors import InsertFailedError
 from cuckoo.finalizers import (
@@ -25,6 +25,7 @@ from cuckoo.finalizers import (
 )
 from cuckoo.models import TMODEL
 from cuckoo.mutation import MutationBase
+from cuckoo.root_node import BinaryTreeNode, RootNode
 
 
 class OnConflict(TypedDict):
@@ -113,8 +114,9 @@ class InnerInsert(
         yield self.model(**data)
 
     def _build_many_models(self):
-        for data in self._root._get_response(self._query_alias, "returning"):
-            yield self.model(**data)
+        return self._root._response_data
+        # for data in self._root._get_response(self._query_alias, "returning"):
+        #     yield self.model(**data)
 
     def _get_rows(self) -> int:
         rows = self._root._get_response(self._query_alias, "affected_rows")
