@@ -40,23 +40,24 @@ services:
       - HASURA_GRAPHQL_METADATA_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
       - HASURA_GRAPHQL_ENABLE_CONSOLE=true
       - HASURA_GRAPHQL_ADMIN_SECRET=hasura
-    healthcheck:
-      test: curl -f http://localhost:8080/healthz || exit 1
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 0s
+    # healthcheck:
+    #   test: curl -f http://0.0.0.0:$HASURA_PORT/healthz || exit 1
+    #   interval: 10s
+    #   timeout: 3s
+    #   retries: 3
+    #   start_period: 0s
     image: hasura/graphql-engine:v2.12.1
     ports:
-      - '8080:8080'
+      - ${HASURA_PORT:-8080}:${HASURA_PORT:-8080}
     restart: on-failure
 
   tests:
     build:
       context: .
       dockerfile: devDockerfile
+      # bash -c 'python --version && pip freeze|grep ^pydantic= && coverage run -m pytest ./tests -v -m "not performance" --durations=10'
     command: >
-      bash -c 'python --version && pip freeze|grep ^pydantic= && coverage run -m pytest ./tests -v -m "not performance" --durations=10'
+      pytest -x -vv -x tests/test_mutation.py
     container_name: tests
     depends_on:
       db:

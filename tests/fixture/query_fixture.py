@@ -131,13 +131,15 @@ AUTHOR_ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
                             article.copy(
                                 update={
                                     "comments_aggregate": AggregateResponse(
-                                        aggregate={"count": 5}
+                                        aggregate={"count": len(article.comments)}
                                     ),
                                 }
                             )
                             for article in author.articles
                         ],
-                        "articles_aggregate": AggregateResponse(aggregate={"count": 5}),
+                        "articles_aggregate": AggregateResponse(
+                            aggregate={"count": len(author.articles)}
+                        ),
                     }
                 )
                 for author in authors

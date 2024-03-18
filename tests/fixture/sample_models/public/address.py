@@ -1,11 +1,11 @@
 from typing import Optional
 
-from cuckoo.models.common import (
+from cuckoo.models import (
+    CreatableModel,
+    DeletableModel,
     HasuraTableModel,
     IdentityModel,
-    CreatableModel,
     UpdatableModel,
-    DeletableModel,
 )
 
 
@@ -17,6 +17,7 @@ class Address(
     UpdatableModel,
 ):
     _table_name = "addresses"
+
     street: Optional[str]
     postal_code: Optional[str]
     walk_score: Optional[float]

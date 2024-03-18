@@ -10,7 +10,7 @@ WORKDIR $APP_HOME
 
 
 # pip install all deps
-COPY requirements.txt .coveragerc ./
+COPY requirements.txt ./
 COPY tests/requirements.txt $APP_HOME/requirements_tests.txt
 RUN bash -c "python -m pip install --upgrade pip --no-cache-dir wheel \
     pydantic==${PYDANTIC_VERSION} \

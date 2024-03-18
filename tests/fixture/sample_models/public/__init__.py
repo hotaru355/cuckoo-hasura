@@ -5,14 +5,14 @@ from tests.fixture.sample_models.public.article import (
     ArticleBase,
     ArticleNumerics,
 )
-from tests.fixture.sample_models.public.author_detail import (
-    AuthorDetail,
-)
 from tests.fixture.sample_models.public.author import (
     Author,
     AuthorAggregate,
     AuthorBase,
     AuthorNumerics,
+)
+from tests.fixture.sample_models.public.author_detail import (
+    AuthorDetail,
 )
 from tests.fixture.sample_models.public.comment import (
     Comment,
@@ -23,6 +23,24 @@ from tests.fixture.sample_models.public.comment import (
 from tests.fixture.sample_models.public.details_addresses import (
     DetailsAddresses,
 )
+
+__all__ = [
+    "Address",
+    "Article",
+    "ArticleAggregate",
+    "ArticleBase",
+    "ArticleNumerics",
+    "AuthorDetail",
+    "Author",
+    "AuthorAggregate",
+    "AuthorBase",
+    "AuthorNumerics",
+    "Comment",
+    "CommentAggregate",
+    "CommentBase",
+    "CommentNumerics",
+    "DetailsAddresses",
+]
 
 Article.update_forward_refs(
     Author=Author,

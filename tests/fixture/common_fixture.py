@@ -9,35 +9,34 @@ from typing import (
     Protocol,
     Sequence,
     Type,
-    Union,
     TypedDict,
     TypeVar,
+    Union,
 )
 
 from httpx import AsyncClient, Client
 
 from cuckoo import Delete, Insert, Query, Update
-from cuckoo.include import TCOLUMNS
 from cuckoo.finalizers import (
     TRETURN,
-    ExecutingFinalizer,
-    ReturningFinalizer,
-    YieldingFinalizer,
     AffectedRowsFinalizer,
-    YieldingAffectedRowsFinalizer,
     AggregateFinalizer,
     AggregatesDict,
+    ExecutingFinalizer,
+    ReturningFinalizer,
+    YieldingAffectedRowsFinalizer,
     YieldingAggregateFinalizer,
+    YieldingFinalizer,
 )
-from cuckoo.models.aggregate import (
+from cuckoo.include import TCOLUMNS
+from cuckoo.models import (
+    TMODEL,
     TMODEL_BASE,
     TNUM_PROPS,
     Aggregate,
     AggregateResponse,
 )
-from cuckoo.models.common import TMODEL
 from cuckoo.mutation import Mutation
-
 
 TBUILDER = TypeVar(
     "TBUILDER",
@@ -66,6 +65,7 @@ class FinalizeReturning(Protocol, Generic[TBUILDER, TRETURN]):
         self,
         run_test: Callable[[Type[TBUILDER]], ExecutingFinalizer],
         columns: Optional[TCOLUMNS] = None,
+        invert_selection: Optional[bool] = False,
         session: Optional[Client] = None,
         session_async: Optional[AsyncClient] = None,
         logger: Optional[Logger] = None,
@@ -253,10 +253,14 @@ class FinalizeParams:
         async def finalize(
             run_test: Callable[[Callable[[Any], TBUILDER]], ReturningFinalizer],
             columns: Optional[TCOLUMNS] = None,
+            invert_selection: Optional[bool] = False,
             **kwargs,
         ):
             finalizer = run_test(lambda model: self._builder(model=model, **kwargs))
-            return finalizer.returning(**({"columns": columns} if columns else {}))
+            return finalizer.returning(
+                **({"columns": columns} if columns else {}),
+                invert_selection=invert_selection,
+            )
 
         return [finalize], "returning"
 
@@ -264,11 +268,13 @@ class FinalizeParams:
         async def finalize(
             run_test: Callable[[Callable[[Any], TBUILDER]], ReturningFinalizer],
             columns: Optional[TCOLUMNS] = None,
+            invert_selection: Optional[bool] = False,
             **kwargs,
         ):
             finalizer = run_test(lambda model: self._builder(model=model, **kwargs))
             return await finalizer.returning_async(
-                **({"columns": columns} if columns else {})
+                **({"columns": columns} if columns else {}),
+                invert_selection=invert_selection,
             )
 
         return [finalize], "returning_async"
@@ -280,13 +286,17 @@ class FinalizeParams:
         async def finalize(
             run_test: Callable[[Callable[[Any], TBUILDER]], YieldingFinalizer],
             columns: Optional[TCOLUMNS] = None,
+            invert_selection: Optional[bool] = False,
             **kwargs,
         ):
             finalizer: YieldingFinalizer = run_test(
                 lambda model: self._builder(model=model, **kwargs)
             )
             return gen_to_val(
-                finalizer.yielding(**({"columns": columns} if columns else {}))
+                finalizer.yielding(
+                    **({"columns": columns} if columns else {}),
+                    invert_selection=invert_selection,
+                )
             )
 
         return [finalize], "yielding"
@@ -298,6 +308,7 @@ class FinalizeParams:
         async def finalize(
             run_test: Callable[[Callable[[Any], TBUILDER]], ReturningFinalizer],
             columns: Optional[TCOLUMNS] = None,
+            invert_selection: Optional[bool] = False,
             **kwargs,
         ):
             batch_kwargs = {
@@ -314,7 +325,10 @@ class FinalizeParams:
                     BatchBuilder = BatchBuilder[3]
 
                 finalizer = run_test(BatchBuilder)
-                result = finalizer.yielding(**({"columns": columns} if columns else {}))
+                result = finalizer.yielding(
+                    **({"columns": columns} if columns else {}),
+                    invert_selection=invert_selection,
+                )
 
             return gen_to_val(result)
 

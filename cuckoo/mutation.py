@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from contextlib import asynccontextmanager, contextmanager
 from logging import Logger
 from typing import Any, Generic, Optional, Type
@@ -9,13 +10,12 @@ from cuckoo.binary_tree_node import BinaryTreeNode
 from cuckoo.constants import ORDER_BY, WHERE, CuckooConfig
 from cuckoo.errors import MutationFailedError
 from cuckoo.finalizers import (
-    ReturningFinalizer,
     TFIN_MANY,
     TFIN_ONE,
+    ReturningFinalizer,
     YieldingFinalizer,
 )
-from cuckoo.models import TMODEL
-from cuckoo.models.common import TBATCH_MODEL
+from cuckoo.models import TBATCH_MODEL, TMODEL
 from cuckoo.root_node import RootNode
 from cuckoo.utils import to_sql_function_args
 
@@ -192,9 +192,9 @@ class MutationBase(
             constructors. Any instance created by these is bound to the hasura
             transaction.
         """
+        from cuckoo.delete import BatchDelete
         from cuckoo.insert import BatchInsert
         from cuckoo.update import BatchUpdate
-        from cuckoo.delete import BatchDelete
 
         root = Mutation(
             model=object,  # hack
@@ -239,9 +239,9 @@ class MutationBase(
         session_async: Optional[AsyncClient] = None,
         logger: Optional[Logger] = None,
     ):
+        from cuckoo.delete import BatchDelete
         from cuckoo.insert import BatchInsert
         from cuckoo.update import BatchUpdate
-        from cuckoo.delete import BatchDelete
 
         root = Mutation(
             model=object,  # hack

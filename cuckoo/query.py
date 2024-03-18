@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from contextlib import asynccontextmanager, contextmanager
 from logging import Logger
 from typing import (
@@ -12,27 +13,29 @@ from uuid import UUID
 
 from httpx import AsyncClient, Client
 
-from cuckoo.root_node import RootNode
 from cuckoo.binary_tree_node import BinaryTreeNode
 from cuckoo.constants import ORDER_BY, WHERE, CuckooConfig
 from cuckoo.errors import RecordNotFoundError
 from cuckoo.finalizers import (
-    AggregateFinalizer,
-    ReturningFinalizer,
     TFIN_AGGR,
     TFIN_MANY,
     TFIN_ONE,
+    AggregateFinalizer,
+    ReturningFinalizer,
     YieldingAggregateFinalizer,
     YieldingFinalizer,
 )
-from cuckoo.models import TMODEL, Aggregate
-from cuckoo.models.aggregate import (
+from cuckoo.models import (
+    TBATCH_MODEL,
     TBATCHMODEL_BASE,
     TBATCHNUM_PROPS,
+    TMODEL,
     TMODEL_BASE,
     TNUM_PROPS,
+    Aggregate,
+    UntypedModel,
 )
-from cuckoo.models.common import TBATCH_MODEL, UntypedModel
+from cuckoo.root_node import RootNode
 from cuckoo.utils import to_sql_function_args
 
 
@@ -47,8 +50,7 @@ class InnerQuery(
         TNUM_PROPS,
     ],
 ):
-    """
-    The inner part of a query.
+    """The inner part of a query.
 
     Extends:
         - BinaryTreeNode: Provides properties and methods to create a binary tree.
@@ -96,20 +98,19 @@ class InnerQuery(
         self,
         uuid: UUID,
     ):
-        """
-        Build a query for finding a single model by its UUID.
+        """Build a query for finding a single model by its UUID.
 
-        ### Args:
-        - `uuid`: The uuid of the record to query
+        Args:
+            uuid: The uuid of the record to query
 
-        ### Returns:
-        - `ReturningFinalizer[TMODEL]` for queries outside of a `batch()`
+        Returns:
+            ReturningFinalizer: if outside of a `batch()`
             execution context
-        - `YieldingFinalizer[TMODEL]` for queries inside a `batch()`
+            YieldingFinalizer: if inside a `batch()`
             execution context
 
-        ### Raises:
-        `NotFoundError` if no matching record was found
+        Raises:
+            NotFoundError: no matching record was found
         """
 
         inner_query = self._get_inner_query()
@@ -357,8 +358,7 @@ class Query(
         TNUM_PROPS,
     ],
 ):
-    """
-    Query builder for retrieving one, many, or an aggregate of models.
+    """Query builder for retrieving one, many, or an aggregate of models.
 
     Extends:
         RootNode: provides functionality to execute a query.

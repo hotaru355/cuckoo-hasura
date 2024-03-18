@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from logging import Logger
 from types import GeneratorType
 from typing import (
@@ -7,10 +8,10 @@ from typing import (
     Union,
 )
 
-from httpx import Client, Response, AsyncClient
 import orjson
+from httpx import AsyncClient, Client, Response
 from pydantic import BaseModel
-from tenacity import AsyncRetrying, Retrying, RetryError
+from tenacity import AsyncRetrying, RetryError, Retrying
 
 from cuckoo.binary_tree_node import BinaryTreeNode
 from cuckoo.constants import HASURA_DEFAULT_CONFIG, RETRY_DEFAULT_CONFIG, CuckooConfig
@@ -147,6 +148,13 @@ class RootNode(BinaryTreeNode[TMODEL]):
         try:
             for attempt in Retrying(**self._config["retry"]):
                 with attempt:
+                    # with session.stream(
+                    #     method="POST",
+                    #     url=self._config["url"],
+                    #     headers=self._config["headers"],
+                    #     json=json,
+                    # ) as response:
+                    #     ijson.items(response.iter_bytes(), "data.item")
                     response = session.post(
                         url=self._config["url"],
                         headers=self._config["headers"],
