@@ -14,13 +14,13 @@ keywords = []
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent"
+    "Operating System :: OS Independent",
 ]
 dependencies = [
     "httpx>=0.24.0",
     "orjson>=3.0.0",
     "pydantic>=1.0.0,<2.0.0",
-    "tenacity>=8.0.0"
+    "tenacity>=8.0.0",
 ]
 [project.urls]
 "Homepage" = "https://github.com/hotaru355/cuckoo-hasura"
@@ -43,7 +43,7 @@ exclude_also = [
     "raise NotImplementedError",
     # Don't complain if non-runnable code isn't run:
     "if TYPE_CHECKING:",
-    "if __name__ == .__main__.:"
+    "if __name__ == .__main__.:",
 ]
 # Target is 95%
 fail_under = 98
@@ -54,7 +54,7 @@ omit = [
     # omit init files:
     "*/__init__.py",
     # foreign code:
-    "cuckoo/encoders.py"
+    "cuckoo/encoders.py",
 ]
 show_missing = true
 [tool.coverage.xml]
@@ -66,7 +66,7 @@ asyncio_mode = "auto"
 addopts = "--ignore-glob=**/fixture/*"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "performance: marks a performance test (deselect with '-m \"not performance\"')"
+    "performance: marks a performance test (deselect with '-m \"not performance\"')",
 ]
 [tool.pytest-watcher]
 now = true
@@ -90,3 +90,7 @@ ignore-init-module-imports = true
 [tool.setuptools]
 packages = ["cuckoo", "cuckoo.models", "codegen"]
 
+### TYPE CHECKING
+[tool.pyright]
+# defineConstant = { "TYPE_CHECKING": false }
+include = ["cuckoo/**", "codegen/**"]
