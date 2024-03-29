@@ -22,7 +22,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 0s
-    image: postgis/postgis:latest
+    image: postgis/postgis:15-3.4
     ports:
       - '5432:5432'
     restart: on-failure
@@ -40,12 +40,12 @@ services:
       - HASURA_GRAPHQL_METADATA_DATABASE_URL=postgres://postgres:postgres@db:5432/postgres
       - HASURA_GRAPHQL_ENABLE_CONSOLE=true
       - HASURA_GRAPHQL_ADMIN_SECRET=hasura
-    # healthcheck:
-    #   test: curl -f http://0.0.0.0:$HASURA_PORT/healthz || exit 1
-    #   interval: 10s
-    #   timeout: 3s
-    #   retries: 3
-    #   start_period: 0s
+    healthcheck:
+      test: curl -f http://0.0.0.0:$HASURA_PORT/healthz || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 0s
     image: hasura/graphql-engine:v2.12.1
     ports:
       - ${HASURA_PORT:-8080}:${HASURA_PORT:-8080}
@@ -55,9 +55,8 @@ services:
     build:
       context: .
       dockerfile: devDockerfile
-      # bash -c 'python --version && pip freeze|grep ^pydantic= && coverage run -m pytest ./tests -v -m "not performance" --durations=10'
     command: >
-      pytest -x -vv -x tests/test_mutation.py
+      bash -c 'python --version && pip freeze|grep ^pydantic= && coverage run -m pytest ./tests -v -m "not performance" --durations=10'
     container_name: tests
     depends_on:
       db:

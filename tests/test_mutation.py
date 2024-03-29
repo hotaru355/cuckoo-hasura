@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any, Callable, Type
-from uuid import UUID, uuid4
 from unittest.mock import ANY
+from uuid import UUID, uuid4
 
 from geojson_pydantic import Polygon
 from httpx import AsyncClient, Client
@@ -307,15 +307,18 @@ class TestOneFunction:
         session_async: AsyncClient,
     ):
         random_author = persisted_authors[7]
+        user_uuid = uuid4()
         expected_author = get_expected_author(random_author)
         expected_author.age += 1
+        expected_author.updated_by = user_uuid
+        expected_author.updated_at = ANY
 
         actual_author = await finalize(
             run_test=lambda Mutation: Mutation(Author).one_function(
                 "inc_author_age",
                 args={
                     "author_uuid": random_author.uuid,
-                    "user_uuid": uuid4(),
+                    "user_uuid": user_uuid,
                 },
             ),
             columns=all_columns(

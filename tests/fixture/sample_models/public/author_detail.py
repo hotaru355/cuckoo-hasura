@@ -29,10 +29,7 @@ class AuthorDetailBase(
     country: Optional[str]
 
 
-class AuthorDetail(
-    HasuraTableModel,
-    AuthorDetailBase,
-):
+class AuthorDetail(HasuraTableModel, AuthorDetailBase):
     _table_name = "author_details"
     author: Optional[Author]
     primary_address: Optional[Address]

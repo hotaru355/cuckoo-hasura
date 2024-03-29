@@ -8,6 +8,7 @@ from cuckoo.delete import BatchDelete
 from cuckoo.insert import BatchInsert
 from cuckoo.update import BatchUpdate
 from tests.fixture.common_fixture import (
+    AUTHOR_RELATIONS,
     ParameterizeArgs,
 )
 from tests.fixture.common_utils import (
@@ -481,13 +482,6 @@ def delete_one(persisted_authors: list[Author], session: Client):
             .yielding(
                 columns=[],
                 invert_selection=True,
-                # columns=[
-                #     "uuid",
-                #     "name",
-                #     "age",
-                #     "jsonb_list",
-                #     "jsonb_dict",
-                # ]
             )
         )
 
@@ -505,26 +499,8 @@ def delete_one(persisted_authors: list[Author], session: Client):
         ) == 0
         assert_authors_unordered(
             [actual_author],
-            [
-                author_to_delete.copy(
-                    exclude={
-                        "detail",
-                        "articles",
-                        "articles_aggregate",
-                    }
-                )
-            ],
+            [author_to_delete.copy(exclude=AUTHOR_RELATIONS)],
         )
-        # assert actual_author == author_to_delete
-        # assert actual_author.dict(exclude_unset=True) == author_to_delete.dict(
-        #     include={
-        #         "uuid",
-        #         "name",
-        #         "age",
-        #         "jsonb_list",
-        #         "jsonb_dict",
-        #     }
-        # )
 
     return run_mutation, assert_model
 
@@ -573,16 +549,7 @@ def delete_many(persisted_authors: list[Author], session: Client):
         ) == 0
         assert_authors_unordered(
             actual_authors,
-            [
-                author.copy(
-                    exclude={
-                        "detail",
-                        "articles",
-                        "articles_aggregate",
-                    }
-                )
-                for author in authors_yielding
-            ],
+            [author.copy(exclude=AUTHOR_RELATIONS) for author in authors_yielding],
         )
 
         # .yield_affected_rows
@@ -605,16 +572,7 @@ def delete_many(persisted_authors: list[Author], session: Client):
         ) == 0
         assert_authors_unordered(
             actual_authors,
-            [
-                author.copy(
-                    exclude={
-                        "detail",
-                        "articles",
-                        "articles_aggregate",
-                    }
-                )
-                for author in authors_with_rows
-            ],
+            [author.copy(exclude=AUTHOR_RELATIONS) for author in authors_with_rows],
         )
         assert actual_num == len(
             authors_with_rows

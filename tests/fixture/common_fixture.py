@@ -38,6 +38,8 @@ from cuckoo.models import (
 )
 from cuckoo.mutation import Mutation
 
+AUTHOR_RELATIONS = {"articles", "articles_aggregate", "detail"}
+
 TBUILDER = TypeVar(
     "TBUILDER",
     Query,
@@ -69,8 +71,7 @@ class FinalizeReturning(Protocol, Generic[TBUILDER, TRETURN]):
         session: Optional[Client] = None,
         session_async: Optional[AsyncClient] = None,
         logger: Optional[Logger] = None,
-    ) -> Awaitable[TRETURN]:
-        ...
+    ) -> Awaitable[TRETURN]: ...
 
 
 class FinalizeAggregate(
@@ -86,8 +87,7 @@ class FinalizeAggregate(
         aggregate_args: dict,
         session: Optional[Client] = None,
         session_async: Optional[AsyncClient] = None,
-    ) -> Awaitable[Aggregate[TMODEL_BASE, TNUM_PROPS]]:
-        ...
+    ) -> Awaitable[Aggregate[TMODEL_BASE, TNUM_PROPS]]: ...
 
 
 class FinalizeWithNodes(Protocol, Generic[TMODEL]):
@@ -98,8 +98,7 @@ class FinalizeWithNodes(Protocol, Generic[TMODEL]):
         columns: Optional[TCOLUMNS] = None,
         session: Optional[Client] = None,
         session_async: Optional[AsyncClient] = None,
-    ) -> Awaitable[list[TMODEL]]:
-        ...
+    ) -> Awaitable[list[TMODEL]]: ...
 
 
 class FinalizeAffectedRows(Protocol, Generic[TBUILDER, TRETURN]):
@@ -109,8 +108,7 @@ class FinalizeAffectedRows(Protocol, Generic[TBUILDER, TRETURN]):
         session: Optional[Client] = None,
         session_async: Optional[AsyncClient] = None,
         logger: Optional[Logger] = None,
-    ) -> Awaitable[TRETURN]:
-        ...
+    ) -> Awaitable[TRETURN]: ...
 
 
 class FinalizeParams:
@@ -687,7 +685,6 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             lambda author: {},
             lambda author: author.copy(
                 update={
-                    "name": "updated",
                     "articles": [
                         article.copy(
                             update={
@@ -713,7 +710,6 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             },
             lambda author: author.copy(
                 update={
-                    "name": "updated",
                     "articles": [
                         author.articles[3].copy(
                             update={
@@ -737,7 +733,6 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             },
             lambda author: author.copy(
                 update={
-                    "name": "updated",
                     "articles": [
                         article.copy(
                             update={
@@ -767,7 +762,6 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             },
             lambda author: author.copy(
                 update={
-                    "name": "updated",
                     "articles": [
                         author.articles[4].copy(
                             update={
@@ -809,7 +803,6 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             },
             lambda author: author.copy(
                 update={
-                    "name": "updated",
                     "articles": [
                         author.articles[1].copy(
                             update={
@@ -857,7 +850,6 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             },
             lambda author: author.copy(
                 update={
-                    "name": "updated",
                     "articles": [
                         author.articles[3].copy(
                             update={
@@ -927,7 +919,6 @@ ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
             },
             lambda author: author.copy(
                 update={
-                    "name": "updated",
                     "articles": [
                         author.articles[4].copy(
                             update={

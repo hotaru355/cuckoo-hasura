@@ -1,6 +1,6 @@
+import re
 from typing import Callable
 from uuid import UUID
-import re
 
 from httpx import AsyncClient, Client
 from pytest import fixture, mark, raises
@@ -160,18 +160,14 @@ class TestOne:
                 columns=[Include(Address).one().returning()],
             )
 
-        m = re.compile(
-            (
-                "Ambiguous sub query\. Candidates:\['(.)', '(.)']\. "
-                "Use the `field_name` argument to select one\."
-            )
-        ).match(str(err))
-        assert {m.group(1),m.group(2)} == {'primary_address', 'secondary_address'}
-        assert (
-            "Ambiguous sub query. "
-            "Candidates: []. "
-            "Use the `field_name` argument to select one."
-        ) in str(err)
+        match = re.match(
+            r".*Ambiguous sub query. Candidates: \['(\w+)', '(\w+)'\]\. "
+            r"Use the `field_name` argument to select one\.",
+            str(err),
+        )
+        assert match
+        field_names = match.groups()
+        assert set(field_names) == {"primary_address", "secondary_address"}
 
     async def test_raises_error_if_including_invalid_object(
         self,

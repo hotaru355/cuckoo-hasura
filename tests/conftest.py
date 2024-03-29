@@ -1,17 +1,13 @@
-import os
-from http import HTTPStatus
 from pathlib import Path
 from uuid import uuid4
 
 import pytest_asyncio
 from dotenv import load_dotenv
-from httpx import AsyncClient, Client, HTTPError
+from httpx import AsyncClient, Client
 from pytest import fixture
-from pytest_docker.plugin import Services
 
 load_dotenv(".env.default")
-from cuckoo.constants import HASURA_HEALTH_URL, HASURA_URL  # noqa: E402
-from tests.hasura_setup_util import (  # noqa: E402
+from tests.hasura_setup_util import (
     clear_metadata,
     create_many_relation,
     create_one_relation,
@@ -19,32 +15,6 @@ from tests.hasura_setup_util import (  # noqa: E402
     track_functions,
     track_tables,
 )
-
-
-@fixture(scope="session")
-def docker_compose_file(pytestconfig):
-    """Change search path for docker-compse.yml from `tests` folder to root folder."""
-
-    return os.path.join(str(pytestconfig.rootdir), "docker-compose.yml")
-
-
-def is_hasura_responsive():
-    try:
-        response = Client(timeout=60).get(HASURA_HEALTH_URL)
-
-        return response.status_code == HTTPStatus.OK
-    except HTTPError:
-        return False
-
-
-# @fixture(scope="session", autouse=True)
-# def hasura_service(docker_services: Services):
-#     """Ensure that Hasura service is up and responsive."""
-
-#     docker_services.wait_until_responsive(
-#         timeout=60, pause=5, check=is_hasura_responsive
-#     )
-#     return HASURA_URL
 
 
 @fixture(scope="module")

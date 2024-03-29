@@ -387,7 +387,6 @@ def assert_authors_updated(
             [actual_author.copy(exclude={"updated_at"})],
             [expected_author.copy(exclude={"updated_at"})],
         )
-        assert actual_author.updated_at and expected_author.updated_at
         assert actual_author.updated_at > expected_author.updated_at
 
 

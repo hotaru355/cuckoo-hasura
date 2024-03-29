@@ -22,14 +22,16 @@ class PydanticV1TableModel(TableModel):
         return [
             (
                 field_name,
-                field_type,
+                field_model.type_,
                 cls._is_list_field(field_model),
             )
             for field_name, field_model in all_class_fields
-            if (not include_relations)
-            and (
-                cls._is_table_model_class(field_type := field_model.type_)
-                or cls._is_aggregate_model_class(field_type)
+            if (
+                include_relations
+                or not (
+                    cls._is_table_model_class(field_model.type_)
+                    or cls._is_aggregate_model_class(field_model.type_)
+                )
             )
         ]
 

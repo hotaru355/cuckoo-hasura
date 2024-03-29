@@ -32,6 +32,9 @@ codegen = ["case-converter>=1.1.0", "graphql-core>=3.2.3"]
 
 ### COVERAGE
 [tool.coverage.run]
+source = [
+    "cuckoo/",
+]
 branch = true
 [tool.coverage.report]
 # Regexes for lines to exclude from consideration:
@@ -53,12 +56,12 @@ omit = [
     "*/tests/*",
     # omit init files:
     "*/__init__.py",
-    # foreign code:
+    # omit foreign code:
     "cuckoo/encoders.py",
 ]
 show_missing = true
 [tool.coverage.xml]
-output = "/tmp/coverage.xml"
+output = "coverage.xml"
 
 ### PYTEST
 [tool.pytest.ini_options]
@@ -81,10 +84,12 @@ ignore_patterns = []
 [tool.ruff.lint]
 ignore-init-module-imports = true
 [tool.ruff.lint.per-file-ignores]
-# Don't complain if `__init__.py` contains unused imports:
+# Don't complain, if `__init__.py` contains unused imports:
 "__init__.py" = ["F401"]
-# Don't complain if files in `tests` folder use `import * from ...`:
+# Don't complain, if files in `tests` folder use `import * from ...`:
 "tests/*" = ["F403"]
+# Don't complain, if `conftest.py` has imports not at top of file
+"tests/conftest.py" = ["E402"]
 
 ### SETUPTOOLS
 [tool.setuptools]

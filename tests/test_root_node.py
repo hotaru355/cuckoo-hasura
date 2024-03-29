@@ -16,7 +16,6 @@ from tests.fixture.common_utils import generate_author_data
 from tests.fixture.sample_models.public import Article, Author
 
 
-@mark.asyncio(scope="session")
 class TestJsonifyVariables:
     @mark.parametrize(**VARIABLE_SEQUENCES)
     @mark.parametrize(**VARIABLE_TYPES)
@@ -101,7 +100,6 @@ class TestJsonifyVariables:
         assert limit_seconds > mean(seconds_elapsed)
 
 
-@mark.asyncio(scope="session")
 class TestIsRoot:
     def test_simple_query_is_root_node(self):
         query = Query(Author)
@@ -142,7 +140,6 @@ class TestIsRoot:
         assert batch_query._parent != batch_query
 
 
-@mark.asyncio(scope="session")
 class TestExecute:
     def test_default_config_stops_retrying_after_5_attempts(
         self,

@@ -59,4 +59,4 @@ class TestHasuraTableModel:
             ],
         ).to_hasura_input()
 
-        assert actual == expected, f"{actual}{expected}"
+        assert actual == expected

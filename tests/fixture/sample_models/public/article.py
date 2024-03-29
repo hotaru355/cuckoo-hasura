@@ -1,16 +1,17 @@
 from __future__ import annotations
-from typing import ForwardRef, Optional, TYPE_CHECKING
+
+from typing import TYPE_CHECKING, ForwardRef, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
 
 from cuckoo.models import (
     AggregateResponse,
+    CreatableModel,
+    DeletableModel,
     HasuraTableModel,
     IdentityModel,
-    CreatableModel,
     UpdatableModel,
-    DeletableModel,
 )
 
 if TYPE_CHECKING:
@@ -40,10 +41,7 @@ class ArticleBase(
     word_count: Optional[int]
 
 
-class Article(
-    ArticleBase,
-    HasuraTableModel,
-):
+class Article(ArticleBase, HasuraTableModel):
     _table_name = "articles"
     author: Optional[Author]
     comments: Optional[list[Comment]]

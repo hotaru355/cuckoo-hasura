@@ -148,13 +148,6 @@ class RootNode(BinaryTreeNode[TMODEL]):
         try:
             for attempt in Retrying(**self._config["retry"]):
                 with attempt:
-                    # with session.stream(
-                    #     method="POST",
-                    #     url=self._config["url"],
-                    #     headers=self._config["headers"],
-                    #     json=json,
-                    # ) as response:
-                    #     ijson.items(response.iter_bytes(), "data.item")
                     response = session.post(
                         url=self._config["url"],
                         headers=self._config["headers"],
