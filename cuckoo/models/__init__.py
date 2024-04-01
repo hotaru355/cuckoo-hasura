@@ -1,4 +1,4 @@
-from .buildins import (
+from .builtins import (
     TBATCH_MODEL,
     TBATCHMODEL_BASE,
     TBATCHNUM_PROPS,
@@ -16,7 +16,7 @@ from .common import (
     UntypedModel,
     UpdatableModel,
 )
-from .vendors import (
+from .providers import (
     PydanticV1TableModel,
 )
 

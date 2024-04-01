@@ -11,6 +11,7 @@ from cuckoo.errors import HasuraServerError, RecordNotFoundError
 from cuckoo.models import Aggregate, AggregateResponse
 from tests.fixture.common_fixture import (
     ARTICLE_COMMENT_CONDITIONALS,
+    AUTHOR_RELATIONS,
     FinalizeAggregate,
     FinalizeParams,
     FinalizeReturning,
@@ -118,23 +119,17 @@ class TestOneByPK:
             (
                 ["name"],
                 True,
-                lambda author: author.copy(
-                    exclude={"name", "articles", "articles_aggregate", "detail"}
-                ),
+                lambda author: author.copy(exclude={"name", *AUTHOR_RELATIONS}),
             ),
             (
                 [],
                 True,
-                lambda author: author.copy(
-                    exclude={"articles", "articles_aggregate", "detail"}
-                ),
+                lambda author: author.copy(exclude=AUTHOR_RELATIONS),
             ),
             (
                 None,
                 True,
-                lambda author: author.copy(
-                    exclude={"articles", "articles_aggregate", "detail"}
-                ),
+                lambda author: author.copy(exclude=AUTHOR_RELATIONS),
             ),
         ],
         ids=[
@@ -922,11 +917,3 @@ def persisted_authors_with_counts(persisted_authors: list[Author]):
         )
         for author in persisted_authors
     ]
-
-    # persisted_author = InsertAuthor(
-    #     **generate_author_data(
-    #         user_uuid=user_uuid,
-    #         num_authors=1,
-    #         num_articles=0,
-    #     )[0]
-    # )

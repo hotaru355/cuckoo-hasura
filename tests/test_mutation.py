@@ -1,5 +1,6 @@
 import asyncio
 from typing import Any, Callable, Type
+from unittest.mock import ANY
 from uuid import UUID, uuid4
 
 from geojson_pydantic import Polygon
@@ -306,15 +307,18 @@ class TestOneFunction:
         session_async: AsyncClient,
     ):
         random_author = persisted_authors[7]
+        user_uuid = uuid4()
         expected_author = get_expected_author(random_author)
         expected_author.age += 1
+        expected_author.updated_by = user_uuid
+        expected_author.updated_at = ANY
 
         actual_author = await finalize(
             run_test=lambda Mutation: Mutation(Author).one_function(
                 "inc_author_age",
                 args={
                     "author_uuid": random_author.uuid,
-                    "user_uuid": uuid4(),
+                    "user_uuid": user_uuid,
                 },
             ),
             columns=all_columns(
@@ -408,8 +412,15 @@ class TestManyFunction:
         session: Client,
         session_async: AsyncClient,
     ):
+        user_uuid = uuid4()
         expected_authors = [
-            author.copy(update={"age": author.age + 1})
+            author.copy(
+                update={
+                    "age": author.age + 1,
+                    "updated_by": user_uuid,
+                    "updated_at": ANY,
+                }
+            )
             for author in get_expected_authors(persisted_authors)
         ]
 
@@ -418,7 +429,7 @@ class TestManyFunction:
                 "inc_all_authors_age",
                 args={
                     "author_uuids": [author.uuid for author in persisted_authors],
-                    "user_uuid": uuid4(),
+                    "user_uuid": user_uuid,
                 },
                 **get_author_condition(persisted_authors),
             ),
@@ -439,9 +450,8 @@ def persisted_authors(user_uuid: UUID, session: Client, session_async: AsyncClie
     return persist_authors(
         user_uuid,
         num_authors=20,
-        num_articles=0,
-        # Note that update and delete tests use `authors.pop()` to "reserve" their own
-        # test record
+        # Note that update and delete tests use `authors.pop()` to prevent
+        # interdependent test cases
         session=session,
         session_async=session_async,
     )

@@ -14,7 +14,7 @@ from typing import (
 )
 
 from cuckoo.constants import ORDER_BY, WHERE
-from cuckoo.models import TMODEL
+from cuckoo.models import TMODEL, TableModel
 from cuckoo.utils import BracketStyle, in_brackets
 
 if TYPE_CHECKING:
@@ -240,8 +240,8 @@ class BinaryTreeNode(Generic[TMODEL]):
         super().__init__()
         self.model: Type[TMODEL] = model
         self._root: RootNode
-        self._parent: BinaryTreeNode
-        self._children: list[BinaryTreeNode] = []
+        self._parent: BinaryTreeNode[TableModel]
+        self._children: list[BinaryTreeNode[TableModel]] = []
         self._fragments = GraphQLFragments[TMODEL](self)
 
         if parent:

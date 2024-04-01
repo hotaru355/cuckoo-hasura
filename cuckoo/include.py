@@ -118,7 +118,7 @@ class Include(BinaryTreeNode[TMODEL]):
         return parent_field_names.pop()
 
     def _verify_field_is_model(self, field_name):
-        field_type = self._parent.model.type_of(field_name, include_relations=True)
+        field_type = self._parent.model._get_field_type(field_name)
         if field_type is None:
             raise HasuraClientError(
                 f"Invalid sub-query. The provided `field_name={field_name}` does "

@@ -15,21 +15,9 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: ./
-      # - name: Build test container
-      #   run: >
-      #     docker compose build
-      #     --build-arg PYTHON_VERSION=${{ matrix.python-version }}
-      #     --build-arg PYDANTIC_VERSION=${{ matrix.pydantic-version }} 
-      #     tests
-      # - name: Run test suite
-      #   run: >
-      #     docker compose run --name tests tests
-      # - name: Run coverage report
-      #   run: >
-      #     docker start tests &&
-      #     docker exec tests coverage xml &&
-      #     docker cp tests:/tmp/coverage.xml . &&
-      #     docker exec tests coverage report
+      - name: Start Database and Hasura Server
+        run: >
+          docker compose up -d
       - name: Install Python dependencies
         run: >
           python -m pip install --upgrade pip 
@@ -38,7 +26,8 @@ jobs:
       - name: Run test suite
         run: >
           coverage run -m pytest ./tests
-          -v
+          -vv
+          -x
           -m "not performance"
           --durations=10
       - name: Run coverage report
@@ -47,7 +36,7 @@ jobs:
       - name: Publish coverage report to PR
         uses: orgoro/coverage@v3
         with:
-          coverageFile: ./coverage.xml
+          coverageFile: coverage.xml
           token: ${{ secrets.GITHUB_TOKEN }}
 
 

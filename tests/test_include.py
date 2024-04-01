@@ -1,3 +1,4 @@
+import re
 from typing import Callable
 from uuid import UUID
 
@@ -159,11 +160,14 @@ class TestOne:
                 columns=[Include(Address).one().returning()],
             )
 
-        assert (
-            "Ambiguous sub query. "
-            "Candidates: ['primary_address', 'secondary_address']. "
-            "Use the `field_name` argument to select one."
-        ) in str(err)
+        match = re.match(
+            r".*Ambiguous sub query. Candidates: \['(\w+)', '(\w+)'\]\. "
+            r"Use the `field_name` argument to select one\.",
+            str(err),
+        )
+        assert match
+        field_names = match.groups()
+        assert set(field_names) == {"primary_address", "secondary_address"}
 
     async def test_raises_error_if_including_invalid_object(
         self,
