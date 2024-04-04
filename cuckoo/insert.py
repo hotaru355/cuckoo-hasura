@@ -114,9 +114,8 @@ class InnerInsert(
         yield self.model(**data)
 
     def _build_many_models(self):
-        return self._root._response_data
-        # for data in self._root._get_response(self._query_alias, "returning"):
-        #     yield self.model(**data)
+        for data in self._root._get_response(self._query_alias, "returning"):
+            yield self.model(**data)
 
     def _get_rows(self) -> int:
         rows = self._root._get_response(self._query_alias, "affected_rows")

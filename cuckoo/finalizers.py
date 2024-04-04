@@ -11,8 +11,6 @@ from typing import (
     Union,
 )
 
-import httpx
-import ijson
 from typing_extensions import NotRequired
 
 from cuckoo.binary_tree_node import (
@@ -28,29 +26,6 @@ from cuckoo.models import TMODEL, TMODEL_BASE, TNUM_PROPS, Aggregate
 
 if TYPE_CHECKING:
     from cuckoo.include import TCOLUMNS, TINCLUDE
-
-
-import itertools as it
-from io import TextIOBase
-
-
-class IterStringIO(TextIOBase):
-    def __init__(self, iterable=None):
-        iterable = iterable or []
-        self.iter = it.chain.from_iterable(iterable)
-
-    def not_newline(self, s):
-        return s not in {"\n", "\r", "\r\n"}
-
-    def read(self, n=None):
-        chunk = it.islice(self.iter, None, n)
-        # print("N", n, "".join(chunk))
-
-        return "".join(chunk)
-
-    def readline(self, n=None):
-        to_read = it.takewhile(self.not_newline, self.iter)
-        return bytearray(it.islice(to_read, None, n))
 
 
 class CountDict(TypedDict):
@@ -144,9 +119,9 @@ class ExecutingFinalizer(Finalizer):
                     f"Found type={type(str_or_constructor)}."
                 )
 
-    def _execute(self):
+    def _execute(self, stream=False):
         if not self._node._root._is_batch:
-            self._node._root._execute()
+            self._node._root._execute(stream=stream)
 
     async def _execute_async(self):
         if not self._node._root._is_batch:
@@ -210,8 +185,9 @@ class YieldingFinalizer(
     def __init__(
         self: YieldingFinalizer,
         node: BinaryTreeNode,
-        returning_fn: Callable[[], Generator[TYIELD, None, None]],
         gen_to_val: dict,
+        returning_fn: Optional[Callable[[], Generator[TYIELD, None, None]]] = None,
+        streaming_fn=None,
         response_key=ColumnResponseKey,
         **kwargs,
     ):
@@ -219,6 +195,7 @@ class YieldingFinalizer(
         self._returning_fn = returning_fn
         self._response_key = response_key
         self._gen_to_val = gen_to_val
+        self._streaming_fn = streaming_fn
 
     def yielding(
         self: YieldingFinalizer,
@@ -229,43 +206,13 @@ class YieldingFinalizer(
         resolved_columns = self._resolve_column_selection(columns, invert_selection)
         self._node._fragments.response_keys.append(self._response_key(resolved_columns))
         ExecutingFinalizer._bind_includes(self._node)
-        # self._execute()
 
-        query = str(self._node._root)
-        variables = self._node._root._get_all_variables()
-        json = {"query": self._node._root._compact(query)}
-        if variables:
-            json["variables"] = self._node._root._jsonify_variables(variables)
-
-        with httpx.stream(
-            method="POST",
-            url=self._node._root._config["url"],
-            headers=self._node._root._config["headers"],
-            json=json,
-            timeout=60,
-        ) as response:
-            print("DD", response)
-            # for t in response.iter_text():
-            #     print("D", t)
-            #     yield t
-            backend = ijson.get_backend("yajl2_c")
-            parser = ijson.parse(IterStringIO(response.iter_text()))
-            for prefix, event, value in parser:
-                if prefix == "data.aggregate.count":
-                    yield "count", value
-                elif prefix == "data.aggregate.nodes.item":
-                    yield "nodes", value
-            # for key, value in backend.kvitems(
-            #     IterStringIO(response.iter_text()), "data"
-            # ):
-            #     print("KEY ", key, type(value))
-            # for item in backend.items(
-            #     IterStringIO(response.iter_text(1000)), "data.var1.item"
-            # ):
-            # yield self._node._root.model(**item)
-            yield self._node._root.model()
-
-        # return self._returning_fn()
+        if self._streaming_fn:
+            self._execute(stream=True)
+            return self._streaming_fn()
+        else:
+            self._execute()
+            return self._returning_fn()
 
 
 class ReturningFinalizer(

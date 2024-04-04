@@ -11,6 +11,7 @@ from typing import (
 )
 from uuid import UUID
 
+import ijson
 from httpx import AsyncClient, Client
 
 from cuckoo.binary_tree_node import BinaryTreeNode
@@ -35,7 +36,7 @@ from cuckoo.models import (
     Aggregate,
     UntypedModel,
 )
-from cuckoo.root_node import RootNode
+from cuckoo.root_node import IterByteIO, RootNode
 from cuckoo.utils import to_sql_function_args
 
 
@@ -172,7 +173,8 @@ class InnerQuery(
 
         return self._many_finalizer(
             node=inner_query,
-            returning_fn=inner_query._build_many_models,
+            streaming_fn=inner_query._build_many_models_stream,
+            returning_fn=inner_query._build_many_models,  # for async only
             gen_to_val={"returning": list},
         )
 
@@ -311,10 +313,16 @@ class InnerQuery(
         yield self.model(**data)
 
     def _build_many_models(self):
-        return self._root._response_data
-        # data_list: list[dict] = self._root._get_response(self._query_alias)
-        # for data in data_list:
-        #     yield self.model(**data)
+        data_list: list[dict] = self._root._get_response(self._query_alias)
+        for data in data_list:
+            yield self.model(**data)
+
+    def _build_many_models_stream(self):
+        for item in ijson.items(
+            IterByteIO(self._root._response.iter_bytes()),
+            f"data.{self._query_alias}.item",
+        ):
+            yield self.model(**item)
 
     def _build_aggregate(self):
         response: dict[str, Any] = self._root._get_response(

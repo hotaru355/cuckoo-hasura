@@ -1,17 +1,18 @@
 from __future__ import annotations
 
+from io import BytesIO
+from itertools import chain, islice
 from logging import Logger
 from types import GeneratorType
 from typing import (
     Any,
+    Iterable,
     Optional,
     Union,
 )
 
-import httpx
-import ijson
 import orjson
-from httpx import AsyncClient, Client, Response
+from httpx import AsyncClient, Client
 from pydantic import BaseModel
 from tenacity import AsyncRetrying, RetryError, Retrying
 
@@ -20,7 +21,7 @@ from cuckoo.constants import HASURA_DEFAULT_CONFIG, RETRY_DEFAULT_CONFIG, Cuckoo
 from cuckoo.encoders import jsonable_encoder
 from cuckoo.errors import HasuraClientError, HasuraServerError
 from cuckoo.models import TMODEL
-from cuckoo.utils import in_brackets, to_truncated_str
+from cuckoo.utils import in_brackets, to_compact_str, to_truncated_str
 
 
 class RootNode(BinaryTreeNode[TMODEL]):
@@ -40,13 +41,24 @@ class RootNode(BinaryTreeNode[TMODEL]):
             "retry": RETRY_DEFAULT_CONFIG,
             **(config if config else {}),
         }
-        self._session = session
-        self._session_async = session_async
         self._logger = logger
         self._var_name_counter: int = 0
         self._response_data: Optional[dict[str, Any]] = None
         self._is_batch = False
+
         self._close_session = False
+        if session is None:
+            self._close_session = True
+            self._session = Client(timeout=None)
+        else:
+            self._session = session
+
+        self._close_session_async = False
+        if session_async is None:
+            self._close_session_async = True
+            self._session_async = AsyncClient(timeout=None)
+        else:
+            self._session_async = session_async
 
     def __str__(self: RootNode):
         outer_args = self._get_all_outer_args()
@@ -84,29 +96,11 @@ class RootNode(BinaryTreeNode[TMODEL]):
         self._var_name_counter += 1
         return f"{self.VAR_NAME_BASE}{self._var_name_counter}"
 
-    def _compact(self: RootNode, gql_string: str):
-        return " ".join(gql_string.split())
-
-    def _get_or_create_session(self, use_async=False):
-        if use_async:
-            if self._session_async is None:
-                self._close_session = True
-                self._session_async = AsyncClient(timeout=None)
-            return self._session_async
-        else:
-            if self._session is None:
-                self._close_session = True
-                self._session = Client(timeout=None)
-            return self._session
-
-    def _process_response(
-        self,
-        response: Response,
-        query: str,
-        variables: dict,
-    ):
-        response.raise_for_status()
-        response_json: dict[str, Any] = response.json()
+    def _process_response(self):
+        response_json: dict[str, Any] = self._response.json()
+        if self._logger:
+            response_text = to_truncated_str(self._response.text)
+            request_text = to_truncated_str(self._response.request.content.decode())
 
         if ("error" in response_json) or ("errors" in response_json):
             errors: list[dict[str, str]] = (
@@ -114,115 +108,80 @@ class RootNode(BinaryTreeNode[TMODEL]):
             ) + response_json.get("errors", [])
             if self._logger:
                 self._logger.error(
-                    f"Query failed. query={self._compact(query)}, "
-                    f"variables={to_truncated_str(variables)}, response={str(errors)}."
+                    f"Query failed.  Request={request_text}, "
+                    f"response={response_text}, errors={str(errors)}."
                 )
             raise HasuraServerError(errors)
-
         elif "data" in response_json:
+            data = response_json["data"]
             if self._logger:
                 self._logger.debug(
-                    f"Query successful. query={self._compact(query)}, "
-                    f"variables={to_truncated_str(variables)}, "
-                    f"response={to_truncated_str(response_json['data'])}."
+                    f"Query successful. Request={request_text}, "
+                    f"response={response_text}."
                 )
-            return response_json["data"]
-
+            self._response_data = data
         else:
             raise NotImplementedError(
-                "response dict did not contain any errors nor data."
+                "Response did not contain any errors nor data. "
+                f"Response={self._response.text}."
             )
 
-    def _stream(self: RootNode):
-        query = str(self)
+    def _build_request(self):
+        query = to_compact_str(str(self))
         variables = self._get_all_variables()
-        json = {"query": self._compact(query)}
+        json = {"query": query}
         if variables:
             json["variables"] = RootNode._jsonify_variables(variables)
 
         if self._logger:
             self._logger.debug(
-                f"Executing query through http stream. query={self._compact(query)}, "
-                f"variables={to_truncated_str(variables)}."
+                f"Request created. {query=}, variables={to_truncated_str(variables)}."
             )
 
-        def _stream_iter():
-            with httpx.stream(
-                method="POST",
-                url=self._config["url"],
-                headers=self._config["headers"],
-                json=json,
-            ) as response:
-                return (
-                    self.model(item)
-                    for item in ijson.items(response.iter_bytes(), "data.item")
-                )
+        return self._session.build_request(
+            method="POST",
+            url=self._config["url"],
+            headers=self._config["headers"],
+            json=json,
+        )
 
-        return _stream_iter
-
-    def _execute(self: RootNode):
-        query = str(self)
-        variables = self._get_all_variables()
-        json = {"query": self._compact(query)}
-        if variables:
-            json["variables"] = RootNode._jsonify_variables(variables)
-
+    def _execute(self: RootNode, stream=False):
+        request = self._build_request()
         if self._logger:
-            self._logger.debug(
-                f"Executing query. query={self._compact(query)}, "
-                f"variables={to_truncated_str(variables)}."
-            )
+            if stream:
+                self._logger.debug("Dispatching http streaming request.")
+            else:
+                self._logger.debug("Dispatching http request.")
 
-        session = self._get_or_create_session()
         try:
             for attempt in Retrying(**self._config["retry"]):
                 with attempt:
-                    response = session.post(
-                        url=self._config["url"],
-                        headers=self._config["headers"],
-                        json=json,
-                    )
+                    self._response = self._session.send(request=request, stream=stream)
+                    self._response.raise_for_status()
+                    if not stream:
+                        self._process_response()
         except RetryError as err:
             raise HasuraServerError(repr(err))
         finally:
             if self._close_session and self._session is not None:
                 self._session.close()
 
-        self._response_data = self._process_response(
-            response=response, query=query, variables=variables
-        )
-
     async def _execute_async(self):
-        query = str(self)
-        variables = self._get_all_variables()
-        json = {"query": self._compact(query)}
-        if variables:
-            json["variables"] = RootNode._jsonify_variables(variables)
-
+        request = self._build_request()
         if self._logger:
-            self._logger.debug(
-                f"Executing async query. query={self._compact(query)}, "
-                f"variables={to_truncated_str(variables)}."
-            )
+            self._logger.debug("Dispatching asynchronous http request.")
 
-        session = self._get_or_create_session(use_async=True)
         try:
             async for attempt in AsyncRetrying(**self._config["retry"]):
                 with attempt:
-                    response = await session.post(
-                        url=self._config["url"],
-                        headers=self._config["headers"],
-                        json=json,
-                    )
+                    self._response = await self._session_async.send(request=request)
+                    self._response.raise_for_status()
+                    self._process_response()
         except RetryError as err:
             raise HasuraServerError(repr(err))
         finally:
-            if self._close_session and self._session_async is not None:
+            if self._close_session_async and self._session_async is not None:
                 await self._session_async.aclose()
-
-        self._response_data = self._process_response(
-            response=response, query=query, variables=variables
-        )
 
     @staticmethod
     def _jsonify_variables(variables):
@@ -254,3 +213,33 @@ class RootNode(BinaryTreeNode[TMODEL]):
             return obj.dict()
         else:
             return jsonable_encoder(obj=obj)
+
+
+class IterByteIO(BytesIO):
+    """Convert an `Iterable[bytes]` into a file-like (read-only) object.
+
+    - uses `itertools.islice` internally to continuously read a chunk of bytes from the
+        generator. This is faster than using a `while` loop to fill the buffer, although
+        no performance testing has been conducted.
+
+    Note: Specifically intended to be used with the `ijson.items()` function that calls
+    the `read` and `readinto` methods only. Other use cases might call functions that
+    are not implemented here.
+
+    """
+
+    def __init__(self, iterable: Iterable[bytes]):
+        self.iter = chain.from_iterable(iterable)
+
+    def readable(self):
+        return True
+
+    def readinto(self, buffer: bytearray):
+        chunk = bytes(islice(self.iter, None, len(buffer)))
+        chunk_length = len(chunk)
+        buffer[:chunk_length] = chunk
+        return chunk_length
+
+    def read(self, chunk_size: Optional[int] = None):
+        chunk = islice(self.iter, None, chunk_size)
+        return bytes(chunk)
