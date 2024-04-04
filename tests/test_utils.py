@@ -3,7 +3,31 @@ from typing import Generator
 from geojson_pydantic import Point
 from pytest import mark, raises
 
-from cuckoo.utils import Prop, grouper, to_sql_function_args, to_truncated_str
+from cuckoo.utils import (
+    Prop,
+    grouper,
+    to_compact_str,
+    to_sql_function_args,
+    to_truncated_str,
+)
+
+
+class TestToCompactStr:
+    def test_removes_extra_whitespaces(self):
+        input_str = " \n \t \r ABC DEF \n \t \r GHI \n \t \r "
+        expected = "ABC DEF GHI"
+
+        actual = to_compact_str(input_str)
+
+        assert actual == expected
+
+    def test_does_not_remove_any_non_consecutive_whitespaces(self):
+        input_str = "ABC DEF\nGHI\tJKL"
+        expected = "ABC DEF GHI JKL"
+
+        actual = to_compact_str(input_str)
+
+        assert actual == expected
 
 
 class TestToTruncatedStr:

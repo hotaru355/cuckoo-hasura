@@ -1,7 +1,6 @@
 import logging
 from logging import LogRecord
 from typing import Any, Callable, Iterable, cast
-from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
 from httpx import AsyncClient, Client
@@ -886,8 +885,7 @@ class TestBatch:
                     BatchQuery(Author).aggregate().with_nodes()
 
 
-@fixture(scope="module", autouse=False)
-# @fixture(scope="module", autouse=True)
+@fixture(scope="module", autouse=True)
 def persisted_authors(user_uuid: UUID, session: Client, session_async: AsyncClient):
     delete_all(session=session)
 

@@ -112,7 +112,7 @@ class InnerMutation(
             gen_to_val={"returning": list},
         )
 
-    def _get_inner_mutation(self: InnerMutation):
+    def _get_inner_mutation(self):
         return (
             InnerMutation(
                 model=self.model,

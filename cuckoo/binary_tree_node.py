@@ -13,7 +13,7 @@ from typing import (
     Union,
 )
 
-from cuckoo.constants import ORDER_BY, WHERE
+from cuckoo.constants import DISTINCT_UPDATES, ORDER_BY, WHERE
 from cuckoo.models import TMODEL, TableModel
 from cuckoo.utils import BracketStyle, in_brackets
 
@@ -143,7 +143,7 @@ class GraphQLFragments(Generic[TMODEL]):
         order_by: Optional[ORDER_BY] = None,
         pk_columns: Optional[dict] = None,
         prepend: Optional[dict] = None,
-        updates: Optional[list[dict]] = None,
+        updates: Optional[DISTINCT_UPDATES] = None,
         where_req: Optional[WHERE] = None,
         where: Optional[WHERE] = None,
         args: Optional[tuple[dict, str]] = None,  # (args_dict, function_name)
@@ -233,7 +233,7 @@ class BinaryTreeNode(Generic[TMODEL]):
     """
 
     def __init__(
-        self: BinaryTreeNode,
+        self,
         model: Type[TMODEL],
         parent: Optional[BinaryTreeNode] = None,
     ):
@@ -251,7 +251,7 @@ class BinaryTreeNode(Generic[TMODEL]):
         else:
             self._root = self._parent = self  # make self a root node
 
-    def __str__(self: BinaryTreeNode):
+    def __str__(self):
         inner_args = self._fragments.inner_args
         return f"""
             {self._fragments.query_name}{

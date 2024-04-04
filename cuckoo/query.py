@@ -173,8 +173,8 @@ class InnerQuery(
 
         return self._many_finalizer(
             node=inner_query,
-            streaming_fn=inner_query._build_many_models_stream,
-            returning_fn=inner_query._build_many_models,  # for async only
+            streaming_fn=inner_query._build_many_models_stream,  # for `yielding` and `returning`
+            returning_fn=inner_query._build_many_models,  # for `returning_async` only
             gen_to_val={"returning": list},
         )
 
@@ -340,7 +340,7 @@ class InnerQuery(
         for data in data_list:
             yield self.model(**data)
 
-    def _get_inner_query(self: InnerQuery):
+    def _get_inner_query(self):
         return (
             InnerQuery(
                 model=self.model,

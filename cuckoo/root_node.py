@@ -28,7 +28,7 @@ class RootNode(BinaryTreeNode[TMODEL]):
     VAR_NAME_BASE = "var"
 
     def __init__(
-        self: RootNode,
+        self,
         config: Optional[CuckooConfig] = None,
         session: Optional[Client] = None,
         session_async: Optional[AsyncClient] = None,
@@ -60,7 +60,7 @@ class RootNode(BinaryTreeNode[TMODEL]):
         else:
             self._session_async = session_async
 
-    def __str__(self: RootNode):
+    def __str__(self):
         outer_args = self._get_all_outer_args()
         return f"""
             {self._fragments.query_name}{
@@ -71,7 +71,7 @@ class RootNode(BinaryTreeNode[TMODEL]):
         """
 
     def _get_response(
-        self: RootNode,
+        self,
         query_alias: str,
         key: Optional[str] = None,
     ) -> Union[dict, list, int]:
@@ -92,7 +92,7 @@ class RootNode(BinaryTreeNode[TMODEL]):
         else:
             return self._response_data.pop(query_alias, None)
 
-    def _generate_var_name(self: RootNode):
+    def _generate_var_name(self):
         self._var_name_counter += 1
         return f"{self.VAR_NAME_BASE}{self._var_name_counter}"
 
@@ -113,13 +113,12 @@ class RootNode(BinaryTreeNode[TMODEL]):
                 )
             raise HasuraServerError(errors)
         elif "data" in response_json:
-            data = response_json["data"]
             if self._logger:
                 self._logger.debug(
                     f"Query successful. Request={request_text}, "
                     f"response={response_text}."
                 )
-            self._response_data = data
+            self._response_data = response_json["data"]
         else:
             raise NotImplementedError(
                 "Response did not contain any errors nor data. "
@@ -145,7 +144,7 @@ class RootNode(BinaryTreeNode[TMODEL]):
             json=json,
         )
 
-    def _execute(self: RootNode, stream=False):
+    def _execute(self, stream=False):
         request = self._build_request()
         if self._logger:
             if stream:
@@ -196,7 +195,7 @@ class RootNode(BinaryTreeNode[TMODEL]):
             for k, v in key_value_pairs
         }
 
-    def _get_all_outer_args(self: RootNode):
+    def _get_all_outer_args(self):
         return [
             outer_arg_submodel
             for outer_args_submodel in self._recurse(

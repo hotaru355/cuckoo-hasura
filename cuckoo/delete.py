@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from logging import Logger
 from typing import (
     Any,
@@ -11,7 +12,6 @@ from uuid import UUID
 
 from httpx import AsyncClient, Client
 
-from cuckoo.root_node import BinaryTreeNode, RootNode
 from cuckoo.constants import WHERE, CuckooConfig
 from cuckoo.errors import RecordNotFoundError
 from cuckoo.finalizers import (
@@ -24,6 +24,7 @@ from cuckoo.finalizers import (
 )
 from cuckoo.models import TMODEL
 from cuckoo.mutation import MutationBase
+from cuckoo.root_node import BinaryTreeNode, RootNode
 
 
 class InnerDelete(
@@ -41,7 +42,7 @@ class InnerDelete(
         self._one_finalizer, self._many_finalizer = finalizers
 
     def one_by_pk(
-        self: InnerDelete,
+        self,
         uuid: UUID,
     ) -> TFIN_ONE:
         inner_delete = self._get_inner_delete()
@@ -61,7 +62,7 @@ class InnerDelete(
         )
 
     def many(
-        self: InnerDelete,
+        self,
         where: WHERE,
     ) -> TFIN_MANY:
         inner_delete = self._get_inner_delete()
@@ -103,7 +104,7 @@ class InnerDelete(
         rows: int = self._root._get_response(self._query_alias, "affected_rows")
         yield rows
 
-    def _get_inner_delete(self: InnerDelete):
+    def _get_inner_delete(self):
         return (
             InnerDelete(
                 model=self.model,

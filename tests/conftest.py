@@ -34,7 +34,7 @@ async def session_async():
         yield test_session
 
 
-@fixture(scope="session", autouse=False)
+@fixture(scope="session", autouse=True)
 def setup_hasura():
     clear_metadata()
     run_sql_file(Path("tests/fixture/sample_models/public/public.schema.sql"))
