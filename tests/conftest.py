@@ -7,6 +7,7 @@ from httpx import AsyncClient, Client
 from pytest import fixture
 
 load_dotenv(".env.default")
+from cuckoo.constants import HASURA_URL
 from tests.hasura_setup_util import (
     clear_metadata,
     create_many_relation,
@@ -15,6 +16,9 @@ from tests.hasura_setup_util import (
     track_functions,
     track_tables,
 )
+
+if not HASURA_URL.startswith("http://localhost"):
+    raise RuntimeError("DO NOT RUN TESTS AGAINST NON-LOCAL DB!")
 
 
 @fixture(scope="module")

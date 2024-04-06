@@ -885,7 +885,7 @@ class TestBatch:
                     BatchQuery(Author).aggregate().with_nodes()
 
 
-@fixture(scope="module", autouse=True)
+@fixture(scope="module")
 def persisted_authors(user_uuid: UUID, session: Client, session_async: AsyncClient):
     delete_all(session=session)
 

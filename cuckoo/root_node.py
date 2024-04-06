@@ -97,7 +97,7 @@ class RootNode(BinaryTreeNode[TMODEL]):
         return f"{self.VAR_NAME_BASE}{self._var_name_counter}"
 
     def _process_response(self):
-        response_json: dict[str, Any] = self._response.json()
+        response_json: dict[str, Any] = orjson.loads(self._response.content)
         if self._logger:
             response_text = to_truncated_str(self._response.text)
             request_text = to_truncated_str(self._response.request.content.decode())
