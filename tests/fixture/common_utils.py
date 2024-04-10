@@ -373,7 +373,23 @@ def all_columns(
         "created_at",
         "deleted_by",
         "deleted_at",
-        Include(AuthorDetail).one().returning(["uuid", "country"]),
+        Include(AuthorDetail)
+        .one()
+        .returning(
+            [
+                "uuid",
+                "author_uuid",
+                "primary_address_uuid",
+                "secondary_address_uuid",
+                "country",
+                "updated_by",
+                "updated_at",
+                "created_by",
+                "created_at",
+                "deleted_by",
+                "deleted_at",
+            ]
+        ),
         (
             Include(Article)
             .many(**article_args)

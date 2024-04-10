@@ -32,8 +32,6 @@ contains a list of at least one response key class.
 
 class ColumnResponseKey:
     def __init__(self, columns: TCOLUMNS):
-        if not columns:
-            raise ValueError("`columns` cannot be empty.")
         self._columns = columns
 
     def __str__(self):

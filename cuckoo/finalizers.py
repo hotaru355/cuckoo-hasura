@@ -22,6 +22,7 @@ from cuckoo.binary_tree_node import (
     ReturningResponseKey,
 )
 from cuckoo.constants import DEFAULT_COLUMNS, DEFAULT_COLUMNS_INVERTED
+from cuckoo.errors import HasuraClientError
 from cuckoo.models import TMODEL, TMODEL_BASE, TNUM_PROPS, Aggregate
 
 if TYPE_CHECKING:
@@ -71,9 +72,14 @@ class Finalizer:
         if columns is None:
             columns = DEFAULT_COLUMNS_INVERTED if invert_selection else DEFAULT_COLUMNS
         if invert_selection:
-            columns_sanatized = {col for col in columns if isinstance(col, str)}
             field_names = {field_name for field_name, _, _ in self._node.model.fields()}
-            return field_names - columns_sanatized
+            invalid_columns = list(filter(lambda col: col not in field_names, columns))
+            if invalid_columns:
+                raise HasuraClientError(
+                    "Invalid columns used with `invert_selection` option: "
+                    f"{invalid_columns}."
+                )
+            return field_names - set(columns)
 
         return columns
 
