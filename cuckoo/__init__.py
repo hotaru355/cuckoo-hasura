@@ -1,22 +1,22 @@
-from cuckoo.include import Include, TCOLUMNS, TINCLUDE
-from cuckoo.constants import CuckooConfig, WHERE, ORDER_DIRECTION, ORDER_BY
+import cuckoo.errors
+import cuckoo.models
+import cuckoo.utils
+from cuckoo.constants import ORDER_BY, ORDER_DIRECTION, WHERE, CuckooConfig
 from cuckoo.delete import Delete
 from cuckoo.finalizers import (
     TFIN_AGGR,
-    TFIN_MANY_DISTINCT,
     TFIN_MANY,
+    TFIN_MANY_DISTINCT,
     TFIN_ONE,
+    TRETURN,
     TRETURN_ROWS,
     TRETURN_WITH,
-    TRETURN,
+    TYIELD,
     TYIELD_ROWS,
     TYIELD_WITH,
-    TYIELD,
 )
+from cuckoo.include import TCOLUMNS, TINCLUDE, Include
 from cuckoo.insert import Insert
 from cuckoo.mutation import Mutation
 from cuckoo.query import Query
 from cuckoo.update import Update
-import cuckoo.errors
-import cuckoo.models
-import cuckoo.utils

@@ -1,11 +1,13 @@
+from typing import List
+
 from cuckoo.models import AggregateResponse
-from tests.fixture.common_utils import (
-    assert_authors_ordered,
-    assert_authors_unordered,
-)
 from tests.fixture.common_fixture import (
     ParameterizeArgs,
 )
+from tests.fixture.common_utils import (
+    assert_authors_ordered,
+)
+from tests.fixture.sample_models.public import Author
 
 UPDATE_ARGS: ParameterizeArgs = {
     "argnames": ["args", "get_expected_author"],
@@ -369,6 +371,25 @@ UPDATE_DISTINCT_ARGS: ParameterizeArgs = {
     ],
 }
 
+
+def assert_authors_updated(
+    actual_authors: List[Author], expected_authors: List[Author]
+):
+    assert len(actual_authors) == len(expected_authors)
+
+    for actual_author in actual_authors:
+        expected_author = next(
+            filter(lambda author: author.uuid == actual_author.uuid, expected_authors),
+            None,
+        )
+        assert expected_author
+        assert_authors_ordered(
+            [actual_author.copy(exclude={"updated_at"})],
+            [expected_author.copy(exclude={"updated_at"})],
+        )
+        assert actual_author.updated_at > expected_author.updated_at
+
+
 AUTHOR_ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
     "argnames": [
         "get_author_condition",
@@ -403,7 +424,7 @@ AUTHOR_ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
                 )
                 for author in authors
             ],
-            assert_authors_unordered,
+            assert_authors_updated,
         ),
         (
             lambda authors: {
@@ -442,7 +463,7 @@ AUTHOR_ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
                     }
                 )
             ],
-            assert_authors_ordered,
+            assert_authors_updated,
         ),
         (
             lambda authors: {
@@ -477,7 +498,7 @@ AUTHOR_ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
                     }
                 )
             ],
-            assert_authors_ordered,
+            assert_authors_updated,
         ),
         (
             lambda authors: {
@@ -530,7 +551,7 @@ AUTHOR_ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
                     }
                 ),
             ],
-            assert_authors_ordered,
+            assert_authors_updated,
         ),
         (
             lambda authors: {
@@ -583,7 +604,7 @@ AUTHOR_ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
                     }
                 )
             ],
-            assert_authors_ordered,
+            assert_authors_updated,
         ),
         (
             lambda authors: {
@@ -656,7 +677,7 @@ AUTHOR_ARTICLE_COMMENT_CONDITIONALS: ParameterizeArgs = {
                     }
                 ),
             ],
-            assert_authors_ordered,
+            assert_authors_updated,
         ),
     ],
 }

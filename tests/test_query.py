@@ -1,27 +1,31 @@
+import asyncio
 import logging
+from datetime import datetime
 from logging import LogRecord
 from typing import Any, Callable, Iterable, cast
 from uuid import UUID, uuid4
+
 from httpx import AsyncClient, Client
+from pytest import LogCaptureFixture, fixture, mark, raises
 
-from pytest import fixture, mark, raises, LogCaptureFixture
-
-from cuckoo import Query
-from cuckoo.errors import HasuraServerError, RecordNotFoundError
-from cuckoo.models.aggregate import Aggregate, AggregateResponse
+from cuckoo import TCOLUMNS, Insert, Query
+from cuckoo.errors import HasuraClientError, HasuraServerError, RecordNotFoundError
+from cuckoo.include import Include
+from cuckoo.models import Aggregate, AggregateResponse
 from tests.fixture.common_fixture import (
     ARTICLE_COMMENT_CONDITIONALS,
+    AUTHOR_RELATIONS,
+    FinalizeAggregate,
     FinalizeParams,
     FinalizeReturning,
-    FinalizeAggregate,
     FinalizeWithNodes,
 )
 from tests.fixture.common_utils import (
     DEFAULT_COUNTS,
     all_columns,
+    assert_authors_ordered,
     delete_all,
     persist_authors,
-    assert_authors_ordered,
 )
 from tests.fixture.query_fixture import (
     AUTHOR_AGGREGATES,
@@ -29,11 +33,17 @@ from tests.fixture.query_fixture import (
     AUTHOR_CONDITIONALS,
     SUGAR_FUNCTIONS,
 )
-from tests.fixture.sample_models.public.author import Author, AuthorBase, AuthorNumerics
-from tests.fixture.sample_models.public.article import Article
-from tests.fixture.sample_models.public.comment import Comment
+from tests.fixture.sample_models.public import (
+    Article,
+    Author,
+    AuthorBase,
+    AuthorDetail,
+    AuthorNumerics,
+    Comment,
+)
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Query).returning_one())
 class TestOneByPK:
     async def test_finding_a_model_if_record_exists(
@@ -96,6 +106,108 @@ class TestOneByPK:
         )
 
         assert_authors_ordered([actual_author], [expected_author])
+
+    @mark.parametrize(
+        argnames=["get_columns", "invert_selection", "get_expected_author"],
+        argvalues=[
+            (
+                lambda: None,
+                False,
+                lambda author: author.copy(include={"uuid"}),
+            ),
+            (
+                lambda: ["name"],
+                False,
+                lambda author: author.copy(include={"name"}),
+            ),
+            (
+                lambda: ["name"],
+                True,
+                lambda author: author.copy(exclude={"name", *AUTHOR_RELATIONS}),
+            ),
+            (
+                lambda: [],
+                True,
+                lambda author: author.copy(exclude=AUTHOR_RELATIONS),
+            ),
+            (
+                lambda: None,
+                True,
+                lambda author: author.copy(exclude=AUTHOR_RELATIONS),
+            ),
+            (
+                lambda: [Include(AuthorDetail).one().returning(invert_selection=True)],
+                False,
+                lambda author: author.copy(include={"detail"}),
+            ),
+        ],
+        ids=[
+            "default column",
+            "one column",
+            "all but one column",
+            "all columns, empty selection",
+            "all columns, no selection",
+            "all columns of included relation",
+        ],
+    )
+    async def test_returning_columns(
+        self,
+        finalize: FinalizeReturning[Query, Author],
+        persisted_authors: list[Author],
+        get_columns: Callable[[], TCOLUMNS],
+        invert_selection: bool,
+        get_expected_author: Callable[[Author], Author],
+        session: Client,
+        session_async: AsyncClient,
+    ):
+        some_author = persisted_authors[7]
+        expected = get_expected_author(some_author)
+
+        actual = await finalize(
+            run_test=lambda Query: Query(Author).one_by_pk(uuid=some_author.uuid),
+            columns=get_columns(),
+            invert_selection=invert_selection,
+            session=session,
+            session_async=session_async,
+        )
+
+        assert_authors_ordered([actual], [expected])
+
+    @mark.parametrize(
+        argnames=["columns"],
+        argvalues=[
+            (["non_existing_column"],),
+            ([Include(Article).many().returning()],),
+            (["articles { uuid }"],),
+            ([None],),
+        ],
+        ids=[
+            "non-existing column",
+            "Include",
+            "relation as a string",
+            "None",
+        ],
+    )
+    async def test_raises_error_if_column_selection_is_inverted_with_invalid_columns(
+        self,
+        finalize: FinalizeReturning[Query, Author],
+        persisted_authors: list[Author],
+        columns: TCOLUMNS,
+        session: Client,
+        session_async: AsyncClient,
+    ):
+        some_author = persisted_authors[3]
+
+        with raises(HasuraClientError) as err:
+            await finalize(
+                run_test=lambda Query: Query(Author).one_by_pk(uuid=some_author.uuid),
+                columns=columns,
+                invert_selection=True,
+                session=session,
+                session_async=session_async,
+            )
+
+        assert "Invalid columns used with `invert_selection` option: " in str(err.value)
 
     async def test_successful_query_gets_logged(
         self,
@@ -171,6 +283,7 @@ class TestOneByPK:
         assert "field 'does_not_exist' not found in type: 'authors'" in record.msg
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Query).returning_many())
 class TestMany:
     async def test_finding_all_records_with_default_column_if_no_condition_is_provided(
@@ -255,6 +368,50 @@ class TestMany:
         assert_authors(actual_authors, expected_authors)
 
 
+@mark.asyncio(scope="session")
+class TestManyYielding:
+    @mark.performance
+    @mark.slow
+    async def test_memory_consumption_is_below_threshold(
+        self,
+        session: Client,
+        session_async: AsyncClient,
+    ):
+        BATCH_SIZE = 10000
+        CONCURRENCY = 4
+        for _ in range(100):
+            await asyncio.gather(
+                *(
+                    [
+                        Insert(Author, session_async=session_async)
+                        .many(
+                            data=(
+                                [
+                                    {
+                                        "name": "one of a million",
+                                        "created_by": uuid4(),
+                                        "updated_by": uuid4(),
+                                    }
+                                ]
+                                * BATCH_SIZE
+                            )
+                        )
+                        .returning_async()
+                    ]
+                    * CONCURRENCY
+                )
+            )
+
+        print("START ", datetime.now().isoformat())
+        count = 0
+        # for author in await Query(Author).many(where={}).returning_async():
+        for author in Query(Author).many(where={}).yielding():
+            # assert isinstance(author.uuid, UUID)
+            count += 1
+        print("END ", count, datetime.now().isoformat())
+
+
+@mark.asyncio(scope="session")
 class TestAggregate:
     @mark.parametrize(**FinalizeParams(Query).aggregate())
     @mark.parametrize(**AUTHOR_AGGREGATES)
@@ -381,6 +538,7 @@ class TestAggregate:
         assert get_value(actual) == expected
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Query).returning_one())
 class TestOneFunction:
     async def test_finding_one_record_with_default_arg_matching_record(
@@ -472,6 +630,7 @@ class TestOneFunction:
         assert_authors_ordered([actual_author], [expected_author])
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Query).returning_many())
 class TestManyFunction:
     async def test_finding_all_records_with_default_arg_matching_records(
@@ -565,6 +724,7 @@ class TestManyFunction:
         assert_authors(actual_authors, expected_authors)
 
 
+@mark.asyncio(scope="session")
 class TestAggregateFunction:
     @mark.parametrize(**FinalizeParams(Query).aggregate())
     @mark.parametrize(**AUTHOR_AGGREGATES)
@@ -705,6 +865,7 @@ class TestAggregateFunction:
         assert get_value(actual) == expected
 
 
+@mark.asyncio(scope="session")
 class TestBatch:
     async def test_mixing_multiple_queries(
         self,
@@ -809,7 +970,7 @@ class TestBatch:
                     BatchQuery(Author).aggregate().with_nodes()
 
 
-@fixture(scope="module", autouse=True)
+@fixture(scope="module")
 def persisted_authors(user_uuid: UUID, session: Client, session_async: AsyncClient):
     delete_all(session=session)
 

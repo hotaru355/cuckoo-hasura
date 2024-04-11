@@ -1,8 +1,9 @@
 import asyncio
 from typing import Any, Callable, Type
+from unittest.mock import ANY
 from uuid import UUID, uuid4
-from geojson_pydantic import Point, Polygon
 
+from geojson_pydantic import Polygon
 from httpx import AsyncClient, Client
 from pytest import fixture, mark, raises
 
@@ -11,7 +12,6 @@ from cuckoo.delete import BatchDelete
 from cuckoo.errors import HasuraClientError
 from cuckoo.insert import BatchInsert
 from cuckoo.update import BatchUpdate
-
 from tests.fixture.common_fixture import (
     ARTICLE_COMMENT_CONDITIONALS,
     FinalizeParams,
@@ -30,10 +30,11 @@ from tests.fixture.query_fixture import (
 from tests.fixture.sample_models import Author
 
 
+@mark.asyncio(scope="session")
 class TestBatch:
     @mark.parametrize(**MUTATIONS1)
     @mark.parametrize(**MUTATIONS2)
-    def test_two_mutations_in_batch(
+    async def test_two_mutations_in_batch(
         self,
         persisted_authors: list[Author],
         run_and_assert1: Callable[
@@ -134,7 +135,7 @@ class TestBatch:
         assert_model1(actual1)
         assert_model2(actual2)
 
-    def test_raises_client_error_when_trying_to_access_result_of_unexecuted_batch(
+    async def test_raises_client_error_when_trying_to_access_result_of_unexecuted_batch(
         self,
         session: Client,
     ):
@@ -150,6 +151,7 @@ class TestBatch:
         )
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Mutation).returning_one())
 class TestOneFunction:
     async def test_mutating_one_record_with_provided_arg_matching_record(
@@ -305,15 +307,18 @@ class TestOneFunction:
         session_async: AsyncClient,
     ):
         random_author = persisted_authors[7]
+        user_uuid = uuid4()
         expected_author = get_expected_author(random_author)
         expected_author.age += 1
+        expected_author.updated_by = user_uuid
+        expected_author.updated_at = ANY
 
         actual_author = await finalize(
             run_test=lambda Mutation: Mutation(Author).one_function(
                 "inc_author_age",
                 args={
                     "author_uuid": random_author.uuid,
-                    "user_uuid": uuid4(),
+                    "user_uuid": user_uuid,
                 },
             ),
             columns=all_columns(
@@ -327,6 +332,7 @@ class TestOneFunction:
         assert_authors_ordered([actual_author], [expected_author])
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Mutation).returning_many())
 class TestManyFunction:
     async def test_mutating_records_with_provided_arg_matching_records(
@@ -406,8 +412,15 @@ class TestManyFunction:
         session: Client,
         session_async: AsyncClient,
     ):
+        user_uuid = uuid4()
         expected_authors = [
-            author.copy(update={"age": author.age + 1})
+            author.copy(
+                update={
+                    "age": author.age + 1,
+                    "updated_by": user_uuid,
+                    "updated_at": ANY,
+                }
+            )
             for author in get_expected_authors(persisted_authors)
         ]
 
@@ -416,7 +429,7 @@ class TestManyFunction:
                 "inc_all_authors_age",
                 args={
                     "author_uuids": [author.uuid for author in persisted_authors],
-                    "user_uuid": uuid4(),
+                    "user_uuid": user_uuid,
                 },
                 **get_author_condition(persisted_authors),
             ),
@@ -437,8 +450,8 @@ def persisted_authors(user_uuid: UUID, session: Client, session_async: AsyncClie
     return persist_authors(
         user_uuid,
         num_authors=20,
-        # Note that update and delete tests use `authors.pop()` to "reserve" their own
-        # test record
+        # Note that update and delete tests use `authors.pop()` to prevent
+        # interdependent test cases
         session=session,
         session_async=session_async,
     )

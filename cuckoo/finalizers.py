@@ -1,14 +1,16 @@
 from __future__ import annotations
+
 from typing import (
+    TYPE_CHECKING,
     Callable,
     Generator,
     Generic,
     Optional,
-    TypeVar,
     TypedDict,
+    TypeVar,
     Union,
-    TYPE_CHECKING,
 )
+
 from typing_extensions import NotRequired
 
 from cuckoo.binary_tree_node import (
@@ -19,11 +21,12 @@ from cuckoo.binary_tree_node import (
     NodesResponseKey,
     ReturningResponseKey,
 )
-from cuckoo.models.aggregate import TMODEL_BASE, TNUM_PROPS, Aggregate
-from cuckoo.models.common import TMODEL
+from cuckoo.constants import DEFAULT_COLUMNS, DEFAULT_COLUMNS_INVERTED
+from cuckoo.errors import HasuraClientError
+from cuckoo.models import TMODEL, TMODEL_BASE, TNUM_PROPS, Aggregate
 
 if TYPE_CHECKING:
-    from cuckoo.include import TINCLUDE, TCOLUMNS
+    from cuckoo.include import TCOLUMNS, TINCLUDE
 
 
 class CountDict(TypedDict):
@@ -60,6 +63,25 @@ class Finalizer:
     ):
         super().__init__()
         self._node: BinaryTreeNode = node
+
+    def _resolve_column_selection(
+        self,
+        columns: Optional[TCOLUMNS] = None,
+        invert_selection=False,
+    ):
+        if columns is None:
+            columns = DEFAULT_COLUMNS_INVERTED if invert_selection else DEFAULT_COLUMNS
+        if invert_selection:
+            field_names = {field_name for field_name, _, _ in self._node.model.fields()}
+            invalid_columns = list(filter(lambda col: col not in field_names, columns))
+            if invalid_columns:
+                raise HasuraClientError(
+                    "Invalid columns used with `invert_selection` option: "
+                    f"{invalid_columns}."
+                )
+            return field_names - set(columns)
+
+        return columns
 
 
 class ExecutingFinalizer(Finalizer):
@@ -113,13 +135,21 @@ class ExecutingFinalizer(Finalizer):
 
 
 class AggregateBaseFinalizer(Finalizer):
-    def _validate_args(self, aggregates: AggregatesDict):
+    def _resolve_aggr_args(self, aggregates: AggregatesDict):
         if not any(aggregates.values()):
             raise ValueError(
                 "Missing argument. At least one argument is required: count, avg, max, "
                 "min, stddev, stddev_pop, stddev_samp, sum, var_pop, var_samp, "
                 "variance."
             )
+        return {
+            key: (
+                self._node._fragments.build_for_count(value)
+                if key == "count"
+                else value
+            )
+            for key, value in aggregates.items()
+        }
 
     def _to_aggr_dict(
         self,
@@ -153,16 +183,6 @@ class AggregateBaseFinalizer(Finalizer):
             if value is not None
         }
 
-    def _build_count_fragments(self, aggr: AggregatesDict):
-        return {
-            key: (
-                self._node._fragments.build_for_count(value)
-                if key == "count"
-                else value
-            )
-            for key, value in aggr.items()
-        }
-
 
 class YieldingFinalizer(
     ExecutingFinalizer,
@@ -183,9 +203,12 @@ class YieldingFinalizer(
 
     def yielding(
         self: YieldingFinalizer,
-        columns: TCOLUMNS = ["uuid"],
+        columns: Optional[TCOLUMNS] = None,
+        *,
+        invert_selection=False,
     ) -> Generator[TYIELD, None, None]:
-        self._node._fragments.response_keys.append(self._response_key(columns))
+        resolved_columns = self._resolve_column_selection(columns, invert_selection)
+        self._node._fragments.response_keys.append(self._response_key(resolved_columns))
         ExecutingFinalizer._bind_includes(self._node)
         self._execute()
 
@@ -198,15 +221,22 @@ class ReturningFinalizer(
 ):
     def returning(
         self: ReturningFinalizer,
-        columns: TCOLUMNS = ["uuid"],
+        columns: Optional[TCOLUMNS] = None,
+        *,
+        invert_selection=False,
     ) -> TRETURN:
-        return self._gen_to_val["returning"](super().yielding(columns))
+        return self._gen_to_val["returning"](
+            super().yielding(columns=columns, invert_selection=invert_selection)
+        )
 
     async def returning_async(
         self: ReturningFinalizer,
-        columns: TCOLUMNS = ["uuid"],
+        columns: Optional[TCOLUMNS] = None,
+        *,
+        invert_selection=False,
     ) -> TRETURN:
-        self._node._fragments.response_keys.append(self._response_key(columns))
+        resolved_columns = self._resolve_column_selection(columns, invert_selection)
+        self._node._fragments.response_keys.append(self._response_key(resolved_columns))
         ExecutingFinalizer._bind_includes(self._node)
         await self._execute_async()
 
@@ -244,10 +274,16 @@ class YieldingAffectedRowsFinalizer(
 
     def yielding_with_rows(
         self: YieldingAffectedRowsFinalizer,
-        columns: TCOLUMNS = ["uuid"],
+        columns: Optional[TCOLUMNS] = None,
+        *,
+        invert_selection=False,
     ) -> TYIELD_WITH:
+        resolved_columns = self._resolve_column_selection(columns, invert_selection)
         self._node._fragments.response_keys.extend(
-            [self._response_key(columns), AffectedRowsResponseKey()]
+            [
+                self._response_key(resolved_columns),
+                AffectedRowsResponseKey(),
+            ]
         )
         ExecutingFinalizer._bind_includes(self._node)
         self._execute()
@@ -273,18 +309,28 @@ class AffectedRowsFinalizer(
 
     def returning_with_rows(
         self: AffectedRowsFinalizer,
-        columns: TCOLUMNS = ["uuid"],
+        columns: Optional[TCOLUMNS] = None,
+        *,
+        invert_selection=False,
     ) -> TRETURN_WITH:
         return self._gen_to_val["returning_with_rows"](
-            super().yielding_with_rows(columns=columns)
+            super().yielding_with_rows(
+                columns=columns, invert_selection=invert_selection
+            )
         )
 
     async def returning_with_rows_async(
         self: YieldingAffectedRowsFinalizer,
-        columns: TCOLUMNS = ["uuid"],
+        columns: Optional[TCOLUMNS] = None,
+        *,
+        invert_selection=False,
     ) -> TRETURN_WITH:
+        resolved_columns = self._resolve_column_selection(columns, invert_selection)
         self._node._fragments.response_keys.extend(
-            [self._response_key(columns), AffectedRowsResponseKey()]
+            [
+                self._response_key(resolved_columns),
+                AffectedRowsResponseKey(),
+            ]
         )
         ExecutingFinalizer._bind_includes(self._node)
         await self._execute_async()
@@ -315,6 +361,7 @@ class YieldingAggregateFinalizer(
 
     def yield_on(
         self: YieldingAggregateFinalizer,
+        *,
         count: Optional[Union[bool, CountDict]] = None,
         avg: Optional[set[str]] = None,
         max: Optional[set[str]] = None,
@@ -340,9 +387,9 @@ class YieldingAggregateFinalizer(
             var_samp,
             variance,
         )
-        self._validate_args(aggregates)
+        resolved_aggregates = self._resolve_aggr_args(aggregates)
         self._node._fragments.response_keys.append(
-            AggregateResponseKey(aggregates=self._build_count_fragments(aggregates))
+            AggregateResponseKey(resolved_aggregates)
         )
         self._execute()
 
@@ -351,15 +398,16 @@ class YieldingAggregateFinalizer(
     def yield_with_nodes(
         self: YieldingAggregateFinalizer,
         aggregates: AggregatesDict,
-        columns: TCOLUMNS = ["uuid"],
+        columns: Optional[TCOLUMNS] = None,
+        *,
+        invert_selection=False,
     ) -> tuple[Generator[Aggregate, None, None], Generator[TMODEL, None, None]]:
-        self._validate_args(aggregates)
+        resolved_columns = self._resolve_column_selection(columns, invert_selection)
+        resolved_aggregates = self._resolve_aggr_args(aggregates)
         self._node._fragments.response_keys.extend(
             [
-                AggregateResponseKey(
-                    aggregates=self._build_count_fragments(aggregates)
-                ),
-                NodesResponseKey(columns=columns),
+                AggregateResponseKey(resolved_aggregates),
+                NodesResponseKey(resolved_columns),
             ]
         )
         ExecutingFinalizer._bind_includes(self._node)
@@ -374,6 +422,7 @@ class AggregateFinalizer(
 ):
     def on(
         self,
+        *,
         count: Optional[Union[bool, CountDict]] = None,
         avg: Optional[set[str]] = None,
         max: Optional[set[str]] = None,
@@ -404,6 +453,7 @@ class AggregateFinalizer(
 
     async def on_async(
         self,
+        *,
         count: Optional[Union[bool, CountDict]] = None,
         avg: Optional[set[str]] = None,
         max: Optional[set[str]] = None,
@@ -429,9 +479,9 @@ class AggregateFinalizer(
             var_samp,
             variance,
         )
-        self._validate_args(aggregates)
+        resolved_aggregates = self._resolve_aggr_args(aggregates)
         self._node._fragments.response_keys.append(
-            AggregateResponseKey(aggregates=self._build_count_fragments(aggregates))
+            AggregateResponseKey(resolved_aggregates)
         )
         await self._execute_async()
 
@@ -440,10 +490,12 @@ class AggregateFinalizer(
     def with_nodes(
         self,
         aggregates: AggregatesDict,
-        columns: TCOLUMNS = ["uuid"],
+        columns: Optional[TCOLUMNS] = None,
+        *,
+        invert_selection=False,
     ) -> tuple[Aggregate[TMODEL_BASE, TNUM_PROPS], list[TMODEL]]:
         aggregate_generator, nodes_generator = self.yield_with_nodes(
-            aggregates=aggregates, columns=columns
+            aggregates=aggregates, columns=columns, invert_selection=invert_selection
         )
 
         return (next(aggregate_generator), list(nodes_generator))
@@ -451,15 +503,16 @@ class AggregateFinalizer(
     async def with_nodes_async(
         self,
         aggregates: AggregatesDict,
-        columns: TCOLUMNS = ["uuid"],
+        columns: Optional[TCOLUMNS] = None,
+        *,
+        invert_selection=False,
     ) -> tuple[Aggregate[TMODEL_BASE, TNUM_PROPS], list[TMODEL]]:
-        self._validate_args(aggregates)
+        resolved_columns = self._resolve_column_selection(columns, invert_selection)
+        resolved_aggregates = self._resolve_aggr_args(aggregates)
         self._node._fragments.response_keys.extend(
             [
-                AggregateResponseKey(
-                    aggregates=self._build_count_fragments(aggregates)
-                ),
-                NodesResponseKey(columns=columns),
+                AggregateResponseKey(resolved_aggregates),
+                NodesResponseKey(resolved_columns),
             ]
         )
         ExecutingFinalizer._bind_includes(self._node)
@@ -506,8 +559,14 @@ class IncludeFinalizer(Finalizer):
         )
         self._finalize_fn = finalize_fn
 
-    def returning(self, columns: TCOLUMNS = ["uuid"]):
-        self._node._fragments.response_keys.append(ColumnResponseKey(columns))
+    def returning(
+        self,
+        columns: Optional[TCOLUMNS] = None,
+        *,
+        invert_selection=False,
+    ):
+        resolved_columns = self._resolve_column_selection(columns, invert_selection)
+        self._node._fragments.response_keys.append(ColumnResponseKey(resolved_columns))
         return self._finalize_fn
 
 
@@ -526,6 +585,7 @@ class AggregateIncludeFinalizer(AggregateBaseFinalizer):
 
     def on(
         self,
+        *,
         count: Optional[Union[bool, CountDict]] = None,
         avg: Optional[set[str]] = None,
         max: Optional[set[str]] = None,
@@ -551,12 +611,12 @@ class AggregateIncludeFinalizer(AggregateBaseFinalizer):
             var_samp,
             variance,
         )
-        self._validate_args(aggregates)
 
         def bind_and_configure(parent):
             include = self._finalize_fn(parent)
+            resolved_aggregates = self._resolve_aggr_args(aggregates)
             self._node._fragments.response_keys.append(
-                AggregateResponseKey(aggregates=self._build_count_fragments(aggregates))
+                AggregateResponseKey(resolved_aggregates)
             )
             return include
 
@@ -566,8 +626,11 @@ class AggregateIncludeFinalizer(AggregateBaseFinalizer):
         self,
         aggregates: AggregatesDict,
         columns: TCOLUMNS,
+        *,
+        invert_selection=False,
     ):
-        self._node._fragments.response_keys.append(NodesResponseKey(columns=columns))
+        resolved_columns = self._resolve_column_selection(columns, invert_selection)
+        self._node._fragments.response_keys.append(NodesResponseKey(resolved_columns))
 
         return self.on(**aggregates)
 

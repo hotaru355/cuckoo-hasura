@@ -1,5 +1,9 @@
 from __future__ import annotations
+
+import inspect
+from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Generic,
@@ -7,19 +11,16 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    TYPE_CHECKING,
 )
-import inspect
-from pathlib import Path
 
 from cuckoo.constants import ORDER_BY, WHERE
-from cuckoo.models import TMODEL
+from cuckoo.models import TMODEL, TableModel
 from cuckoo.utils import BracketStyle, in_brackets
 
 if TYPE_CHECKING:
-    from cuckoo.root_node import RootNode, HasuraClientError
-    from cuckoo.include import TCOLUMNS
     from cuckoo.finalizers import AggregatesDict, CountDict
+    from cuckoo.include import TCOLUMNS
+    from cuckoo.root_node import HasuraClientError, RootNode
 
 """The `BinaryTreeNode[TMODEL]` with its data class `GraphQLFragments`.
 
@@ -235,10 +236,10 @@ class BinaryTreeNode(Generic[TMODEL]):
         parent: Optional[BinaryTreeNode] = None,
     ):
         super().__init__()
-        self.model = model
+        self.model: Type[TMODEL] = model
         self._root: RootNode
-        self._parent: BinaryTreeNode
-        self._children: list[BinaryTreeNode] = []
+        self._parent: BinaryTreeNode[TableModel]
+        self._children: list[BinaryTreeNode[TableModel]] = []
         self._fragments = GraphQLFragments[TMODEL](self)
 
         if parent:

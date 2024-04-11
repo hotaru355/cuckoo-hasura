@@ -2,23 +2,24 @@ from typing import Callable
 from uuid import UUID
 
 from httpx import AsyncClient, Client
-from pytest import mark, fixture, raises
+from pytest import fixture, mark, raises
 
-from cuckoo import Query, Insert, Delete
+from cuckoo import Delete, Insert, Query
 from cuckoo.errors import InsertFailedError
-from tests.fixture.insert_fixture import (
-    INPUT_DATA,
-    INPUT_DATA_LIST,
-    COLUMNS_ARG,
-)
 from tests.fixture.common_fixture import (
     FinalizeAffectedRows,
-    FinalizeReturning,
     FinalizeParams,
+    FinalizeReturning,
+)
+from tests.fixture.insert_fixture import (
+    COLUMNS_ARG,
+    INPUT_DATA,
+    INPUT_DATA_LIST,
 )
 from tests.fixture.sample_models.public import Author
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Insert).returning_one())
 class TestInsertOne:
     @mark.parametrize(**COLUMNS_ARG)
@@ -161,6 +162,7 @@ class TestInsertOne:
             )
 
 
+@mark.asyncio(scope="session")
 class TestInsertMany:
     @mark.parametrize(**FinalizeParams(Insert).returning_many())
     @mark.parametrize(**COLUMNS_ARG)

@@ -1,15 +1,14 @@
+import time
 from statistics import mean
 from typing import Any, Callable, Type
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
-import time
-from httpx import AsyncClient, Client
 
-from pytest import mark, fixture, raises
+from httpx import AsyncClient, Client
+from pytest import fixture, mark, raises
 from tenacity import stop_after_attempt
 
-from cuckoo import Query
-from cuckoo import root_node
+from cuckoo import Query, root_node
 from cuckoo.errors import HasuraServerError
 from cuckoo.include import Include
 from tests.fixture.base_fixture import VARIABLE_SEQUENCES, VARIABLE_TYPES
@@ -230,15 +229,18 @@ class TestExecute:
             yield spy
 
 
+@mark.asyncio(scope="session")
 class TestExecuteAsync:
     async def test_default_config_stops_retrying_after_5_attempts(
         self,
         failing_session: MagicMock,
     ):
         with raises(HasuraServerError):
-            await Query(Author, session_async=failing_session).many(
-                where={}
-            ).returning_async()
+            await (
+                Query(Author, session_async=failing_session)
+                .many(where={})
+                .returning_async()
+            )
 
         assert failing_session.post.call_count == 5
 
@@ -247,15 +249,19 @@ class TestExecuteAsync:
         failing_session: MagicMock,
     ):
         with raises(HasuraServerError):
-            await Query(
-                Author,
-                session_async=failing_session,
-                config={
-                    "retry": {
-                        "stop": stop_after_attempt(3),
-                    }
-                },
-            ).many(where={}).returning_async()
+            await (
+                Query(
+                    Author,
+                    session_async=failing_session,
+                    config={
+                        "retry": {
+                            "stop": stop_after_attempt(3),
+                        }
+                    },
+                )
+                .many(where={})
+                .returning_async()
+            )
 
         assert failing_session.post.call_count == 3
 
@@ -280,9 +286,9 @@ class TestExecuteAsync:
         self,
         session_async: AsyncClient,
     ):
-        await Query(Author, session_async=session_async).many(
-            where={}
-        ).returning_async()
+        await (
+            Query(Author, session_async=session_async).many(where={}).returning_async()
+        )
 
         assert not session_async.is_closed
 
@@ -291,9 +297,11 @@ class TestExecuteAsync:
         failing_session: MagicMock,
     ):
         with raises(HasuraServerError):
-            await Query(Author, session_async=failing_session).many(
-                where={}
-            ).returning_async()
+            await (
+                Query(Author, session_async=failing_session)
+                .many(where={})
+                .returning_async()
+            )
 
         failing_session.aclose.assert_not_called()
 

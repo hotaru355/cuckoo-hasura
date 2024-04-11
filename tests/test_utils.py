@@ -1,9 +1,9 @@
 from typing import Generator
 
-from pytest import raises, mark
 from geojson_pydantic import Point
+from pytest import mark, raises
 
-from cuckoo.utils import Prop, grouper, to_truncated_str, to_sql_function_args
+from cuckoo.utils import Prop, grouper, to_sql_function_args, to_truncated_str
 
 
 class TestToTruncatedStr:

@@ -8,19 +8,20 @@ from cuckoo import Delete, Query
 from cuckoo.errors import RecordNotFoundError
 from tests.fixture.common_fixture import (
     ARTICLE_COMMENT_CONDITIONALS,
-    FinalizeReturning,
     FinalizeParams,
+    FinalizeReturning,
 )
 from tests.fixture.common_utils import (
     all_columns,
+    assert_authors_ordered,
     delete_all,
     persist_authors,
-    assert_authors_ordered,
 )
 from tests.fixture.query_fixture import AUTHOR_ARTICLE_COMMENT_CONDITIONALS
 from tests.fixture.sample_models import Author
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Delete).returning_one())
 class TestOneByPK:
     async def test_deleting_a_model_if_record_exists(
@@ -114,6 +115,7 @@ class TestOneByPK:
         assert actual_author.uuid == existing_uuid
 
 
+@mark.asyncio(scope="session")
 @mark.parametrize(**FinalizeParams(Delete).returning_many())
 class TestMany:
     async def test_returning_an_empty_list_if_non_matching_condition_is_provided(

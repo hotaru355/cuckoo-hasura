@@ -1,24 +1,25 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, ForwardRef, Optional
 
 from geojson_pydantic import Polygon
 from pydantic import BaseModel
 
-from cuckoo.models.aggregate import AggregateResponse
-from cuckoo.models.common import (
+from cuckoo.models import (
+    AggregateResponse,
+    CreatableModel,
+    DeletableModel,
     HasuraTableModel,
     IdentityModel,
-    CreatableModel,
     UpdatableModel,
-    DeletableModel,
 )
 
 if TYPE_CHECKING:
-    from tests.fixture.sample_models.public.author_detail import AuthorDetail
     from tests.fixture.sample_models.public.article import (
         Article,
         ArticleAggregate,
     )
+    from tests.fixture.sample_models.public.author_detail import AuthorDetail
 else:
     AuthorDetail = ForwardRef("AuthorDetail")
     Article = ForwardRef("Article")

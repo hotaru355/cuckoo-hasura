@@ -1,37 +1,25 @@
-import asyncio
 from pathlib import Path
 from uuid import uuid4
 
-from httpx import Client, AsyncClient
-from pytest import fixture
 import pytest_asyncio
+from dotenv import load_dotenv
+from httpx import AsyncClient, Client
+from pytest import fixture
 
+load_dotenv(".env.default")
 from tests.hasura_setup_util import (
     clear_metadata,
+    create_many_relation,
+    create_one_relation,
     run_sql_file,
     track_functions,
     track_tables,
-    create_one_relation,
-    create_many_relation,
 )
 
 
 @fixture(scope="module")
 def user_uuid():
     return uuid4()
-
-
-@fixture(scope="session")
-def event_loop():
-    """
-    REQUIRED to make pytest-asyncio plugin work with async sessions. We replace the
-    plugin's function-scoped fixture with a sessions-scoped version so that the event
-    loop does not get closed after each test.
-    # See: https://stackoverflow.com/a/67307042
-    """
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
 
 @fixture(scope="session")
