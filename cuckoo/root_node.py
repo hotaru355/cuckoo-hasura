@@ -12,7 +12,7 @@ from typing import (
 )
 
 import orjson
-from httpx import AsyncClient, Client
+from httpx import AsyncClient, Client, Response
 from pydantic import BaseModel
 from tenacity import AsyncRetrying, RetryError, Retrying
 
@@ -43,6 +43,7 @@ class RootNode(BinaryTreeNode[TMODEL]):
         }
         self._logger = logger
         self._var_name_counter: int = 0
+        self._response: Optional[Response] = None
         self._response_data: Optional[dict[str, Any]] = None
         self._is_batch = False
 
