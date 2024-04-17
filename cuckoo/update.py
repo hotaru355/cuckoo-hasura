@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from logging import Logger
 from typing import (
     Any,
@@ -10,8 +11,8 @@ from typing import (
 
 from httpx import AsyncClient, Client
 
-from cuckoo.root_node import BinaryTreeNode, RootNode
-from cuckoo.constants import WHERE, CuckooConfig
+from cuckoo.constants import DISTINCT_UPDATES, WHERE, CuckooConfig
+from cuckoo.errors import RecordNotFoundError
 from cuckoo.finalizers import (
     TFIN_MANY,
     TFIN_MANY_DISTINCT,
@@ -23,7 +24,7 @@ from cuckoo.finalizers import (
 )
 from cuckoo.models import TMODEL
 from cuckoo.mutation import MutationBase
-from cuckoo.errors import RecordNotFoundError
+from cuckoo.root_node import BinaryTreeNode, RootNode
 
 
 class InnerUpdate(
@@ -31,7 +32,7 @@ class InnerUpdate(
     Generic[TMODEL, TFIN_ONE, TFIN_MANY, TFIN_MANY_DISTINCT],
 ):
     def __init__(
-        self: InnerUpdate,
+        self,
         model: Type[TMODEL],
         finalizers: tuple[Type[TFIN_ONE], Type[TFIN_MANY], Type[TFIN_MANY_DISTINCT]],
         parent: Optional[BinaryTreeNode] = None,
@@ -45,7 +46,7 @@ class InnerUpdate(
         ) = finalizers
 
     def one_by_pk(
-        self: InnerUpdate,
+        self,
         pk_columns: dict,
         data: Optional[dict] = None,
         inc: Optional[dict] = None,
@@ -81,7 +82,7 @@ class InnerUpdate(
         )
 
     def many(
-        self: InnerUpdate,
+        self,
         where: WHERE,
         data: Optional[dict] = None,
         inc: Optional[dict] = None,
@@ -126,8 +127,8 @@ class InnerUpdate(
         )
 
     def many_distinct(
-        self: InnerUpdate,
-        updates: list[dict],
+        self,
+        updates: DISTINCT_UPDATES,
     ) -> TFIN_MANY_DISTINCT:
         inner_update = self._get_inner_update()
         inner_update._fragments.query_name = (
@@ -180,7 +181,7 @@ class InnerUpdate(
         for data in data_list["returning"]:
             yield self.model(**data)
 
-    def _get_inner_update(self: InnerUpdate):
+    def _get_inner_update(self):
         return (
             InnerUpdate(
                 model=self.model,
@@ -195,7 +196,7 @@ class InnerUpdate(
             else self
         )
 
-    def _assert_update_args(self: InnerUpdate, *args):
+    def _assert_update_args(self, *args):
         if not any([*args]):
             raise ValueError(
                 "Missing argument. At least one argument is required: data, inc, "

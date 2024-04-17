@@ -125,9 +125,9 @@ class ExecutingFinalizer(Finalizer):
                     f"Found type={type(str_or_constructor)}."
                 )
 
-    def _execute(self):
+    def _execute(self, stream=False):
         if not self._node._root._is_batch:
-            self._node._root._execute()
+            self._node._root._execute(stream=stream)
 
     async def _execute_async(self):
         if not self._node._root._is_batch:
@@ -189,20 +189,22 @@ class YieldingFinalizer(
     Generic[TYIELD],
 ):
     def __init__(
-        self: YieldingFinalizer,
+        self,
         node: BinaryTreeNode,
-        returning_fn: Callable[[], Generator[TYIELD, None, None]],
         gen_to_val: dict,
+        returning_fn: Optional[Callable[[], Generator[TYIELD, None, None]]] = None,
+        streaming_fn=None,
         response_key=ColumnResponseKey,
         **kwargs,
     ):
         super().__init__(node=node, **kwargs)
-        self._returning_fn = returning_fn
-        self._response_key = response_key
         self._gen_to_val = gen_to_val
+        self._returning_fn = returning_fn
+        self._streaming_fn = streaming_fn
+        self._response_key = response_key
 
     def yielding(
-        self: YieldingFinalizer,
+        self,
         columns: Optional[TCOLUMNS] = None,
         *,
         invert_selection=False,
@@ -210,9 +212,13 @@ class YieldingFinalizer(
         resolved_columns = self._resolve_column_selection(columns, invert_selection)
         self._node._fragments.response_keys.append(self._response_key(resolved_columns))
         ExecutingFinalizer._bind_includes(self._node)
-        self._execute()
 
-        return self._returning_fn()
+        if self._streaming_fn:
+            self._execute(stream=True)
+            return self._streaming_fn()
+        else:
+            self._execute()
+            return self._returning_fn()
 
 
 class ReturningFinalizer(
@@ -220,7 +226,7 @@ class ReturningFinalizer(
     Generic[TYIELD, TRETURN],
 ):
     def returning(
-        self: ReturningFinalizer,
+        self,
         columns: Optional[TCOLUMNS] = None,
         *,
         invert_selection=False,
@@ -230,7 +236,7 @@ class ReturningFinalizer(
         )
 
     async def returning_async(
-        self: ReturningFinalizer,
+        self,
         columns: Optional[TCOLUMNS] = None,
         *,
         invert_selection=False,
@@ -248,7 +254,7 @@ class YieldingAffectedRowsFinalizer(
     Generic[TYIELD, TYIELD_WITH, TYIELD_ROWS],
 ):
     def __init__(
-        self: YieldingAffectedRowsFinalizer,
+        self,
         node: BinaryTreeNode,
         returning_fn: Callable[[], Generator[TYIELD, None, None]],
         affected_rows_fn: Callable[[], TYIELD_ROWS],
@@ -265,7 +271,7 @@ class YieldingAffectedRowsFinalizer(
         self._returning_with_rows_fn = returning_with_rows_fn
 
     def yield_affected_rows(
-        self: YieldingAffectedRowsFinalizer,
+        self,
     ) -> Generator[TYIELD_ROWS, None, None]:
         self._node._fragments.response_keys.append(AffectedRowsResponseKey())
         self._execute()
@@ -273,7 +279,7 @@ class YieldingAffectedRowsFinalizer(
         return self._affected_rows_fn()
 
     def yielding_with_rows(
-        self: YieldingAffectedRowsFinalizer,
+        self,
         columns: Optional[TCOLUMNS] = None,
         *,
         invert_selection=False,
@@ -296,19 +302,17 @@ class AffectedRowsFinalizer(
     YieldingAffectedRowsFinalizer[TYIELD, TYIELD_WITH, TYIELD_ROWS],
     Generic[TYIELD, TRETURN, TYIELD_WITH, TRETURN_WITH, TYIELD_ROWS, TRETURN_ROWS],
 ):
-    def affected_rows(self: AffectedRowsFinalizer) -> TRETURN_ROWS:
+    def affected_rows(self) -> TRETURN_ROWS:
         return self._gen_to_val["affected_rows"](super().yield_affected_rows())
 
-    async def affected_rows_async(
-        self: YieldingAffectedRowsFinalizer,
-    ) -> TRETURN_ROWS:
+    async def affected_rows_async(self) -> TRETURN_ROWS:
         self._node._fragments.response_keys.append(AffectedRowsResponseKey())
         await self._execute_async()
 
         return self._gen_to_val["affected_rows"](self._affected_rows_fn())
 
     def returning_with_rows(
-        self: AffectedRowsFinalizer,
+        self,
         columns: Optional[TCOLUMNS] = None,
         *,
         invert_selection=False,
@@ -320,7 +324,7 @@ class AffectedRowsFinalizer(
         )
 
     async def returning_with_rows_async(
-        self: YieldingAffectedRowsFinalizer,
+        self,
         columns: Optional[TCOLUMNS] = None,
         *,
         invert_selection=False,
@@ -344,7 +348,7 @@ class YieldingAggregateFinalizer(
     Generic[TMODEL_BASE, TNUM_PROPS, TMODEL],
 ):
     def __init__(
-        self: YieldingAggregateFinalizer,
+        self,
         node: BinaryTreeNode,
         aggregate_fn: Callable[
             [], Generator[Aggregate[TMODEL_BASE, TNUM_PROPS], None, None]
@@ -360,7 +364,7 @@ class YieldingAggregateFinalizer(
         self._nodes_fn = nodes_fn
 
     def yield_on(
-        self: YieldingAggregateFinalizer,
+        self,
         *,
         count: Optional[Union[bool, CountDict]] = None,
         avg: Optional[set[str]] = None,
@@ -396,7 +400,7 @@ class YieldingAggregateFinalizer(
         return self._aggregate_fn()
 
     def yield_with_nodes(
-        self: YieldingAggregateFinalizer,
+        self,
         aggregates: AggregatesDict,
         columns: Optional[TCOLUMNS] = None,
         *,

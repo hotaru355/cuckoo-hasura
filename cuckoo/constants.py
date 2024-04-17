@@ -70,3 +70,11 @@ RETRY_DEFAULT_CONFIG: RetryConfig = {
 WHERE: TypeAlias = dict[str, Any]
 ORDER_DIRECTION: TypeAlias = Union[Literal["asc"], Literal["desc"]]
 ORDER_BY: TypeAlias = dict[str, Union[ORDER_DIRECTION, "ORDER_BY"]]
+
+
+class UpdateManyDistinct(TypedDict):
+    _set: dict[str, Any]
+    where: WHERE
+
+
+DISTINCT_UPDATES: TypeAlias = list[UpdateManyDistinct]

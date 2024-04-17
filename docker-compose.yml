@@ -8,7 +8,6 @@
 # 2.2 Run tests in watch mode. For example:
 # $> docker exec tests ptw -- ./tests -s -x -vv --tb=long
 # $> docker exec tests ptw -- ./tests/test_query.py::TestAggregate::test_syntactic_sugar_functions
-version: "0.1.0"
 
 services:
   db:

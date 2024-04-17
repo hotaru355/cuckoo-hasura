@@ -2,8 +2,8 @@ from enum import Enum
 from itertools import zip_longest
 from types import GeneratorType
 from typing import Any, Generator, Iterable, TypeVar, Union
-import orjson
 
+import orjson
 from pydantic import BaseModel
 
 
@@ -42,6 +42,10 @@ def to_truncated_str(input: Any, limit=1000):
         return input_as_str[:limit] + "..."
     else:
         return input_as_str
+
+
+def to_compact_str(input_string: str):
+    return " ".join(input_string.split())
 
 
 T = TypeVar("T")

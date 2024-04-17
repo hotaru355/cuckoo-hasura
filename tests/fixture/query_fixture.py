@@ -1,15 +1,15 @@
 from enum import Enum
+
 from cuckoo.models import AggregateResponse
+from tests.fixture.common_fixture import (
+    ParameterizeArgs,
+)
 from tests.fixture.common_utils import (
     DEFAULT_COUNTS,
     assert_authors_ordered,
     assert_authors_unordered,
 )
-from tests.fixture.common_fixture import (
-    ParameterizeArgs,
-)
 from tests.fixture.sample_models.public import Article, Comment
-
 
 SUGAR_FUNCTIONS: ParameterizeArgs = {
     "argnames": [

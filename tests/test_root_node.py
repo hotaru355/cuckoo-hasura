@@ -148,7 +148,7 @@ class TestExecute:
         with raises(HasuraServerError):
             Query(Author, session=failing_session).many(where={}).returning()
 
-        assert failing_session.post.call_count == 5
+        assert failing_session.send.call_count == 5
 
     def test_retry_config_can_be_changed(
         self,
@@ -165,7 +165,7 @@ class TestExecute:
                 },
             ).many(where={}).returning()
 
-        assert failing_session.post.call_count == 3
+        assert failing_session.send.call_count == 3
 
     def test_default_session_gets_closed_for_successful_query(
         self,
@@ -204,7 +204,7 @@ class TestExecute:
     @fixture
     def failing_session(self):
         mock = MagicMock(spec=Client)
-        mock.post.side_effect = [
+        mock.send.side_effect = [
             Exception("1"),
             Exception("2"),
             Exception("3"),
@@ -242,7 +242,7 @@ class TestExecuteAsync:
                 .returning_async()
             )
 
-        assert failing_session.post.call_count == 5
+        assert failing_session.send.call_count == 5
 
     async def test_retry_config_can_be_changed(
         self,
@@ -263,7 +263,7 @@ class TestExecuteAsync:
                 .returning_async()
             )
 
-        assert failing_session.post.call_count == 3
+        assert failing_session.send.call_count == 3
 
     async def test_default_session_gets_closed_for_successful_query(
         self,
@@ -308,7 +308,7 @@ class TestExecuteAsync:
     @fixture
     def failing_session(self):
         mock = MagicMock(spec=AsyncClient)
-        mock.post.side_effect = [
+        mock.send.side_effect = [
             Exception("1"),
             Exception("2"),
             Exception("3"),

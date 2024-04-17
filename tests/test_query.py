@@ -240,10 +240,12 @@ class TestOneByPK:
                 caplog.records,
             )
         )
-        assert record
-        assert "authors_by_pk" in record.msg
-        assert str(existing_uuid) in record.msg
-        assert f"{{'name': '{persisted_authors[0].name}'}}" in record.msg
+        assert record, "No debug log found containing 'Query successful.'"
+        assert "authors_by_pk" in record.msg, "Log does not contain query name."
+        assert str(existing_uuid) in record.msg, "Log does not contain query variable."
+        assert (
+            f'{{"name":"{persisted_authors[0].name}"}}' in record.msg
+        ), "Log does not contain query result."
 
     async def test_failed_query_gets_logged(
         self,
@@ -277,10 +279,12 @@ class TestOneByPK:
                 caplog.records,
             )
         )
-        assert record
-        assert "authors_by_pk" in record.msg
-        assert str(existing_uuid) in record.msg
-        assert "field 'does_not_exist' not found in type: 'authors'" in record.msg
+        assert record, "No error log found containing 'Query failed.'"
+        assert "authors_by_pk" in record.msg, "Log does not contain query name."
+        assert str(existing_uuid) in record.msg, "Log does not contain query variable."
+        assert (
+            "field 'does_not_exist' not found in type: 'authors'" in record.msg
+        ), "Log does not contain query error details."
 
 
 @mark.asyncio(scope="session")
