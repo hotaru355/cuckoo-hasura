@@ -6,11 +6,13 @@ from typing import (
     Any,
     Callable,
     Literal,
+    Optional,
     Type,
     TypedDict,
     Union,
 )
 
+from httpx import AsyncClient, Client
 from tenacity import stop_after_attempt, wait_random_exponential
 from typing_extensions import NotRequired, TypeAlias
 
@@ -22,17 +24,24 @@ if TYPE_CHECKING:
 
 HASURA_PORT = int(os.environ.get("HASURA_PORT", "8080"))
 HASURA_HEALTH_URL = os.environ.get("HASURA_HEALTH_URL", "")
-HASURA_URL = os.environ["HASURA_URL"]
-HASURA_ADMIN_SECRET = os.environ["HASURA_ADMIN_SECRET"]
-HASURA_ROLE = os.environ["HASURA_ROLE"]
+HASURA_URL = os.environ.get("HASURA_URL")
+HASURA_ADMIN_SECRET = os.environ.get("HASURA_ADMIN_SECRET")
+HASURA_ROLE = os.environ.get("HASURA_ROLE")
 
 DEFAULT_COLUMNS = ["uuid"]
 DEFAULT_COLUMNS_INVERTED = []
 
 
-class HasuraConfig(TypedDict):
+class GlobalCuckooConfig(TypedDict):
+    cuckoo_config: CuckooConfig
+    session: Optional[Client]
+    session_async: Optional[AsyncClient]
+
+
+class CuckooConfig(TypedDict):
     url: str
     headers: dict[str, str]
+    retry: RetryConfig
 
 
 class RetryConfig(TypedDict):
@@ -48,23 +57,18 @@ class RetryConfig(TypedDict):
     retry_error_callback: NotRequired[Callable[[RetryCallState], Any]]
 
 
-class CuckooConfig(HasuraConfig):
-    retry: RetryConfig
-
-
 HASURA_HEADERS = {
     "X-Hasura-Admin-Secret": HASURA_ADMIN_SECRET,
     "X-Hasura-Role": HASURA_ROLE,
 }
-
-HASURA_DEFAULT_CONFIG: HasuraConfig = {
-    "url": HASURA_URL,
-    "headers": HASURA_HEADERS,
-}
-
 RETRY_DEFAULT_CONFIG: RetryConfig = {
     "wait": wait_random_exponential(multiplier=1, max=60),
     "stop": stop_after_attempt(5),
+}
+HASURA_DEFAULT_CONFIG: CuckooConfig = {
+    "url": HASURA_URL,
+    "headers": HASURA_HEADERS,
+    "retry": RETRY_DEFAULT_CONFIG,
 }
 
 WHERE: TypeAlias = dict[str, Any]

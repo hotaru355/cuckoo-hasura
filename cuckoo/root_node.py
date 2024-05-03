@@ -16,12 +16,13 @@ from httpx import AsyncClient, Client, Response
 from pydantic import BaseModel
 from tenacity import AsyncRetrying, RetryError, Retrying
 
-from cuckoo.binary_tree_node import BinaryTreeNode
-from cuckoo.constants import HASURA_DEFAULT_CONFIG, RETRY_DEFAULT_CONFIG, CuckooConfig
-from cuckoo.encoders import jsonable_encoder
-from cuckoo.errors import HasuraClientError, HasuraServerError
-from cuckoo.models import TMODEL
-from cuckoo.utils import in_brackets, to_compact_str, to_truncated_str
+from .binary_tree_node import BinaryTreeNode
+from .constants import CuckooConfig
+from .cuckoo import Cuckoo
+from .encoders import jsonable_encoder
+from .errors import HasuraClientError, HasuraServerError
+from .models import TMODEL
+from .utils import in_brackets, to_compact_str, to_truncated_str
 
 
 class RootNode(BinaryTreeNode[TMODEL]):
@@ -36,30 +37,26 @@ class RootNode(BinaryTreeNode[TMODEL]):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self._config: CuckooConfig = {
-            **HASURA_DEFAULT_CONFIG,  # type: ignore
-            "retry": RETRY_DEFAULT_CONFIG,
-            **(config if config else {}),
-        }
+
+        self._config = (
+            Cuckoo.cuckoo_config(config)
+            if config is not None
+            else Cuckoo.cuckoo_config()
+        )
         self._logger = logger
         self._var_name_counter: int = 0
         self._response: Optional[Response] = None
         self._response_data: Optional[dict[str, Any]] = None
         self._is_batch = False
 
-        self._close_session = False
-        if session is None:
-            self._close_session = True
-            self._session = Client(timeout=None)
-        else:
-            self._session = session
-
-        self._close_session_async = False
-        if session_async is None:
-            self._close_session_async = True
-            self._session_async = AsyncClient(timeout=None)
-        else:
-            self._session_async = session_async
+        if session is not None and not isinstance(session, Client):
+            raise ValueError("`session` argument is not an httpx.Client instance.")
+        if session_async is not None and not isinstance(session_async, AsyncClient):
+            raise ValueError(
+                "`session_async` argument is not an httpx.AsyncClient instance."
+            )
+        self._session_override = session
+        self._session_override_async = session_async
 
     def __str__(self):
         outer_args = self._get_all_outer_args()
@@ -70,6 +67,38 @@ class RootNode(BinaryTreeNode[TMODEL]):
                 {" ".join(str(child) for child in self._children)}
             }}
         """
+
+    @property
+    def session(self):
+        try:
+            return next(
+                sess
+                for sess in [Cuckoo.session(), self._session_override]
+                if sess is not None
+            )
+        except StopIteration:
+            raise HasuraClientError(
+                "No session provided. It is recommended to use "
+                "`cuckoo.init(session=my_session)` for setting up a global session. "
+                "Use the `session=my_session` argument in the query/mutation "
+                "constructor for a one-time session."
+            )
+
+    @property
+    def session_async(self):
+        try:
+            return next(
+                sess
+                for sess in [Cuckoo.session_async(), self._session_override_async]
+                if sess is not None
+            )
+        except StopIteration:
+            raise HasuraClientError(
+                "No async session provided. It is recommended to use "
+                "`cuckoo.init(session_async=my_session)` for setting up a global session. "
+                "Use the `session_async=my_session` argument in the query/mutation "
+                "constructor for a one-time session."
+            )
 
     def _get_response(
         self,
@@ -127,6 +156,13 @@ class RootNode(BinaryTreeNode[TMODEL]):
             )
 
     def _build_request(self):
+        url = self._config["url"]
+        if url is None:
+            raise HasuraClientError(
+                "Missing Hasura server URL. Setup an `HASURA_URL` environment variable "
+                'or globally configure cuckoo with `cuckoo.init({"url": ""})`'
+            )
+
         query = to_compact_str(str(self))
         variables = self._get_all_variables()
         json = {"query": query}
@@ -138,7 +174,7 @@ class RootNode(BinaryTreeNode[TMODEL]):
                 f"Request created. {query=}, variables={to_truncated_str(variables)}."
             )
 
-        return self._session.build_request(
+        return self.session.build_request(
             method="POST",
             url=self._config["url"],
             headers=self._config["headers"],
@@ -156,15 +192,12 @@ class RootNode(BinaryTreeNode[TMODEL]):
         try:
             for attempt in Retrying(**self._config["retry"]):
                 with attempt:
-                    self._response = self._session.send(request=request, stream=stream)
+                    self._response = self.session.send(request=request, stream=stream)
                     self._response.raise_for_status()
                     if not stream:
                         self._process_response()
         except RetryError as err:
             raise HasuraServerError(repr(err))
-        finally:
-            if self._close_session and self._session is not None:
-                self._session.close()
 
     async def _execute_async(self):
         request = self._build_request()
@@ -174,14 +207,11 @@ class RootNode(BinaryTreeNode[TMODEL]):
         try:
             async for attempt in AsyncRetrying(**self._config["retry"]):
                 with attempt:
-                    self._response = await self._session_async.send(request=request)
+                    self._response = await self.session_async.send(request=request)
                     self._response.raise_for_status()
                     self._process_response()
         except RetryError as err:
             raise HasuraServerError(repr(err))
-        finally:
-            if self._close_session_async and self._session_async is not None:
-                await self._session_async.aclose()
 
     @staticmethod
     def _jsonify_variables(variables):

@@ -1,7 +1,18 @@
+from typing import Optional
+
+from httpx import AsyncClient, Client
+
 import cuckoo.errors
 import cuckoo.models
 import cuckoo.utils
-from cuckoo.constants import ORDER_BY, ORDER_DIRECTION, WHERE, CuckooConfig
+from cuckoo.constants import (
+    ORDER_BY,
+    ORDER_DIRECTION,
+    WHERE,
+    CuckooConfig,
+    GlobalCuckooConfig,
+)
+from cuckoo.cuckoo import Cuckoo
 from cuckoo.delete import Delete
 from cuckoo.finalizers import (
     TFIN_AGGR,
