@@ -13,8 +13,14 @@ from typing import (
 )
 
 from httpx import AsyncClient, Client
-from tenacity import stop_after_attempt, wait_random_exponential
+from tenacity import (
+    retry_if_not_exception_type,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 from typing_extensions import NotRequired, TypeAlias
+
+from cuckoo.errors import HasuraServerError
 
 if TYPE_CHECKING:
     from tenacity import RetryCallState, RetryError
@@ -39,9 +45,9 @@ class GlobalCuckooConfig(TypedDict):
 
 
 class CuckooConfig(TypedDict):
-    url: str
-    headers: dict[str, str]
-    retry: RetryConfig
+    url: NotRequired[str]
+    headers: NotRequired[dict[str, str]]
+    retry: NotRequired[RetryConfig]
 
 
 class RetryConfig(TypedDict):
@@ -64,6 +70,7 @@ HASURA_HEADERS = {
 RETRY_DEFAULT_CONFIG: RetryConfig = {
     "wait": wait_random_exponential(multiplier=1, max=60),
     "stop": stop_after_attempt(5),
+    "retry": retry_if_not_exception_type(HasuraServerError),
 }
 HASURA_DEFAULT_CONFIG: CuckooConfig = {
     "url": HASURA_URL,

@@ -84,15 +84,65 @@ assert str(q) == "query Query($uuid: uuid!) { authors_by_pk(uuid: $uuid) { uuid 
 ## Usage
 
 ### 1. Configuration
+Cuckoo requires:
+- an `httpx.Client` and/or `httpx.AsyncClient` for making synchronous/asynchronous requests
+- connection details to reach the Hasura server
 
-The first step for using Cuckoo is making sure we can connect to your Hasura instance. The easiest way to provide connection settings to Cuckoo is by simply defining 3 environment variables:
+## 1.1 Create an HTTPX Client cuckoo can use to make the request
+For anything but prototyping, it is best to register a client instance that Cuckoo will use for all queries and mutations. Please note that the client needs to be managed (AKA closed) inside the app where Cuckoo is used:
+```py
+from cuckoo import Cuckoo
+from httpx import Client
+
+if __name__ == "__main__":
+    client = Client()
+    Cuckoo.configure(session=client)
+
+    # using Cuckoo anywhere in the code base will now use the default client provided
+
+    client.close()
+```
+
+It is also possible to provide a client for a specific query:
+```py
+from cuckoo import Query
+from httpx import Client
+
+client = Client()
+authors = Query(Authors, session=client).many(..).returning()
+```
+
+## 1.1 Provide connection settings to your Hasura instance
+The easiest way to provide connection settings to Cuckoo is by simply defining 3 environment variables:
 ```sh
 HASURA_URL=http://hasura:8080/v1/graphql
 HASURA_ROLE=admin
 HASURA_ADMIN_SECRET=hasura
 ```
 
-Alternatively, you can provide the connection settings when instantiating your query or mutation. This comes in handy, if you need to connect to different Hasura instances within the same project:
+If you prefer, you can also set these details programatically:
+```py
+from cuckoo import Cuckoo
+
+if __name__ == "__main__":
+    client = Client()
+    Cuckoo.configure(
+        session=client,
+        config={
+            "url": "http://hasura:8080/v1/graphql"
+            "headers": {
+                "X-Hasura-Admin-Secret": "admin",
+                "X-Hasura-Role": "hasura",
+            }
+        }
+    )
+
+    # Cuckoo is ready!
+
+    client.close()
+```
+
+Finally, you can provide the connection settings when instantiating your query or mutation. This comes in handy, if you need to connect to different Hasura instances within the same project:
 ```py
 Query(Author, config={
     "url": "http://hasura:8080/v1/graphql"

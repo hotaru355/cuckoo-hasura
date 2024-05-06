@@ -21,7 +21,13 @@ class Cuckoo:
         session_async: Optional[AsyncClient] = None,
     ):
         for name, prop in [
-            ("cuckoo_config", cuckoo_config),
+            (
+                "cuckoo_config",
+                {
+                    **cls._global_config["cuckoo_config"],
+                    **(cuckoo_config if cuckoo_config else {}),
+                },
+            ),
             ("session", session),
             ("session_async", session_async),
         ]:

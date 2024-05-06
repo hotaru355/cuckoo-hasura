@@ -409,7 +409,7 @@ class TestManyYielding:
         print("START ", datetime.now().isoformat())
         count = 0
         # for author in await Query(Author).many(where={}).returning_async():
-        for author in Query(Author).many(where={}).yielding():
+        for author in Query(Author, session=session).many(where={}).yielding():
             # assert isinstance(author.uuid, UUID)
             count += 1
         print("END ", count, datetime.now().isoformat())

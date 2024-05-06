@@ -1,7 +1,3 @@
-from typing import Optional
-
-from httpx import AsyncClient, Client
-
 import cuckoo.errors
 import cuckoo.models
 import cuckoo.utils
