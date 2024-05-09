@@ -296,11 +296,16 @@ class TestAggregate:
 
 def test_raises_error_if_instance_is_used_more_than_once(
     persisted_author: Author,
+    session: Client,
 ):
     columns = [Include(Article).many().returning()]
-    Query(Author).one_by_pk(uuid=persisted_author.uuid).returning(columns)
+    Query(Author, session=session).one_by_pk(uuid=persisted_author.uuid).returning(
+        columns
+    )
     with raises(ValueError) as error:
-        Query(Author).one_by_pk(uuid=persisted_author.uuid).returning(columns)
+        Query(Author, session=session).one_by_pk(uuid=persisted_author.uuid).returning(
+            columns
+        )
     assert (
         "Found an instance `Include(Article)` that was already used in an executed query"
     ) in str(error)

@@ -6,10 +6,9 @@ from uuid import uuid4
 
 from httpx import AsyncClient, Client
 from pytest import fixture, mark, raises
-from tenacity import stop_after_attempt
+from tenacity import RetryError, stop_after_attempt
 
-from cuckoo import Query, root_node
-from cuckoo.errors import HasuraServerError
+from cuckoo import Query
 from cuckoo.include import Include
 from tests.fixture.base_fixture import VARIABLE_SEQUENCES, VARIABLE_TYPES
 from tests.fixture.common_utils import generate_author_data
@@ -101,8 +100,8 @@ class TestJsonifyVariables:
 
 
 class TestIsRoot:
-    def test_simple_query_is_root_node(self):
-        query = Query(Author)
+    def test_simple_query_is_root_node(self, session: Client):
+        query = Query(Author, session=session)
 
         query.many(where={}).returning()
 
@@ -110,8 +109,8 @@ class TestIsRoot:
         assert query._root == query
         assert query._parent == query
 
-    def test_included_subquery_is_not_root_node(self):
-        query = Query(Author)
+    def test_included_subquery_is_not_root_node(self, session: Client):
+        query = Query(Author, session=session)
         include = Include(Article)
 
         query.many(where={}).returning(columns=[include.many().returning()])
@@ -120,8 +119,8 @@ class TestIsRoot:
         assert include._root != include
         assert include._parent != include
 
-    def test_batch_creates_root_node(self):
-        with Query.batch() as BatchQuery:
+    def test_batch_creates_root_node(self, session: Client):
+        with Query.batch(session=session) as BatchQuery:
             batch_query = BatchQuery(Author)
             batch_query.many(where={}).yielding()
         root = batch_query._parent
@@ -130,8 +129,8 @@ class TestIsRoot:
         assert root._root == root
         assert root._parent == root
 
-    def test_batch_query_is_not_root_node(self):
-        with Query.batch() as BatchQuery:
+    def test_batch_query_is_not_root_node(self, session: Client):
+        with Query.batch(session=session) as BatchQuery:
             batch_query = BatchQuery(Author)
             batch_query.many(where={}).yielding()
 
@@ -145,7 +144,7 @@ class TestExecute:
         self,
         failing_session: MagicMock,
     ):
-        with raises(HasuraServerError):
+        with raises(RetryError):
             Query(Author, session=failing_session).many(where={}).returning()
 
         assert failing_session.send.call_count == 5
@@ -154,7 +153,7 @@ class TestExecute:
         self,
         failing_session: MagicMock,
     ):
-        with raises(HasuraServerError):
+        with raises(RetryError):
             Query(
                 Author,
                 session=failing_session,
@@ -166,40 +165,6 @@ class TestExecute:
             ).many(where={}).returning()
 
         assert failing_session.send.call_count == 3
-
-    def test_default_session_gets_closed_for_successful_query(
-        self,
-        default_session_close: MagicMock,
-    ):
-        Query(Author).many(where={}).returning()
-
-        assert default_session_close.call_count == 1
-
-    def test_default_session_gets_closed_for_unsuccessful_query(
-        self,
-        failing_default_session: MagicMock,
-    ):
-        with raises(HasuraServerError):
-            Query(Author).many(where={}).returning()
-
-        failing_default_session.close.assert_called_once()
-
-    def test_non_default_session_does_not_get_closed_for_successful_query(
-        self,
-        session: Client,
-    ):
-        Query(Author, session=session).many(where={}).returning()
-
-        assert not session.is_closed
-
-    def test_non_default_session_does_not_get_closed_for_unsuccessful_query(
-        self,
-        failing_session: MagicMock,
-    ):
-        with raises(HasuraServerError):
-            Query(Author, session=failing_session).many(where={}).returning()
-
-        failing_session.close.assert_not_called()
 
     @fixture
     def failing_session(self):
@@ -219,15 +184,6 @@ class TestExecute:
             mock.return_value = failing_session
             yield failing_session
 
-    @fixture
-    def default_session_close(self):
-        with patch.object(
-            root_node.Client,
-            "close",
-            wraps=root_node.Client().close,
-        ) as spy:
-            yield spy
-
 
 @mark.asyncio(scope="session")
 class TestExecuteAsync:
@@ -235,7 +191,7 @@ class TestExecuteAsync:
         self,
         failing_session: MagicMock,
     ):
-        with raises(HasuraServerError):
+        with raises(RetryError):
             await (
                 Query(Author, session_async=failing_session)
                 .many(where={})
@@ -248,7 +204,7 @@ class TestExecuteAsync:
         self,
         failing_session: MagicMock,
     ):
-        with raises(HasuraServerError):
+        with raises(RetryError):
             await (
                 Query(
                     Author,
@@ -264,46 +220,6 @@ class TestExecuteAsync:
             )
 
         assert failing_session.send.call_count == 3
-
-    async def test_default_session_gets_closed_for_successful_query(
-        self,
-        default_session_close: MagicMock,
-    ):
-        await Query(Author).many(where={}).returning_async()
-
-        assert default_session_close.call_count == 1
-
-    async def test_default_session_gets_closed_for_unsuccessful_query(
-        self,
-        failing_default_session: MagicMock,
-    ):
-        with raises(HasuraServerError):
-            await Query(Author).many(where={}).returning_async()
-
-        failing_default_session.aclose.assert_called_once()
-
-    async def test_non_default_session_does_not_get_closed_for_successful_query(
-        self,
-        session_async: AsyncClient,
-    ):
-        await (
-            Query(Author, session_async=session_async).many(where={}).returning_async()
-        )
-
-        assert not session_async.is_closed
-
-    async def test_non_default_session_does_not_get_closed_for_unsuccessful_query(
-        self,
-        failing_session: MagicMock,
-    ):
-        with raises(HasuraServerError):
-            await (
-                Query(Author, session_async=failing_session)
-                .many(where={})
-                .returning_async()
-            )
-
-        failing_session.aclose.assert_not_called()
 
     @fixture
     def failing_session(self):
@@ -322,12 +238,3 @@ class TestExecuteAsync:
         with patch("cuckoo.root_node.AsyncClient", spec=Type[AsyncClient]) as mock:
             mock.return_value = failing_session
             yield failing_session
-
-    @fixture
-    def default_session_close(self):
-        with patch.object(
-            root_node.AsyncClient,
-            "aclose",
-            wraps=root_node.AsyncClient().aclose,
-        ) as spy:
-            yield spy
